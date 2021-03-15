@@ -3,11 +3,14 @@ from Centralised import Prosumer,RegularCoordinator
 from OptimisationProblem import *
 from PriceCalculator import *
 from utils import calcREgeneration
+
 if __name__ == '__main__':
     # -------------------------------------problem definition----------------------------------------------------------
+    stepSize = 10 # minutes 
+    nbOfStepInOneDay= int(1440/ stepSize) # entire time in minutes divided by the size of one step
 
-    gridPrices = [random.random()/1000 for i in range(144)]
-    FIT = 0.035 * np.ones(144)
+    gridPrices = [random.random()/1000 for i in range(nbOfStepInOneDay)]
+    FeedInTariff = 0.035 * np.ones(nbOfStepInOneDay) # define the FeedInTariff as constant over the day (based on the tarif defined in data.gouv.fr) - 10c€/kWh
     with open('Forecasted/30001480014107') as f1:
         loadForecat1  = f1.read().splitlines()
     loadForecat1 = [float(lf) for lf in loadForecat1]
@@ -50,8 +53,8 @@ if __name__ == '__main__':
     prosumer3 = Prosumer(3, loadForecat3, REgeneration3, battery3)
     prosumer4 = Prosumer(4, loadForecat4, REgeneration4, battery4)
     #-------------------------------------------------------------------------------------------------------------------
-    # instantiate RegularCoordinator with the prosumer list, grid prices and FIT
-    coordinator = RegularCoordinator(prosumerList=[prosumer1, prosumer2, prosumer3, prosumer4],gridPrices=gridPrices, FIT=FIT, algorithm="GA", pricingScheme= SDR())
+    # instantiate RegularCoordinator with the prosumer list, grid prices and FeedInTariff
+    coordinator = RegularCoordinator(prosumerList=[prosumer1, prosumer2, prosumer3, prosumer4],gridPrices=gridPrices, FIT=FeedInTariff, algorithm="GA")
     #run optimisation and price calculation
     res, pricedic = coordinator.run()
     print(pricedic)

@@ -1,6 +1,5 @@
 import abc
 from Optimiser import Optimiser
-from PriceCalculator import PriceCalculator
 from DReventDispatch import *
 from Battery import *
 from Optimiser import *
@@ -154,13 +153,13 @@ class RegularCoordinator(Coordinator):
         # optimise -> optimal solution
         res = self.optimise(algorithm)
         #instantiate pricing scheme
-        pricingscheme = SDR(gridSellPrice=self._FIT, gridBuyPrice=self._gridPrices,listProsumers=self._prosumers )
+        pricingscheme = SDR(gridSellPrices=self._gridPrices, FIT=self._FIT ,listProsumers=self._prosumers )
         # instantiate price calculator
-        calculator = PriceCalculator(pricingscheme)
+        #calculator = PriceCalculator(pricingscheme)
         # compute costs for every prosumer
-        calculator.generatePrices()
+        pricingscheme.generatePrices()
 
-        resultPriceDic = calculator.applyPrices()
+        resultPriceDic = pricingscheme.applyPrices()
 
         return res, resultPriceDic
 
