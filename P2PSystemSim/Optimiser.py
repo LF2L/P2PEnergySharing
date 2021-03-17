@@ -5,7 +5,7 @@ from pymoo.algorithms.nsga2 import NSGA2
 from pymoo.algorithms.so_genetic_algorithm import GA
 from pymoo.factory import get_sampling, get_crossover, get_mutation, get_termination
 from pymoo.optimize import minimize
-from OptimisationProblem import CommonProblem
+from P2PSystemSim.OptimisationProblem import CommonProblem
 
 class OptimisationAlgorithm(metaclass=abc.ABCMeta):
     def __init__(self, *args, ** kwargs):

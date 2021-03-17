@@ -21,9 +21,18 @@ Information concerning tariff can be found on [data.gouv.fr](https://www.data.go
 This procedure to experiment the projet suppose you already have installed Python3 on your computer and you are quite familiar with virtual environment in Python.
 
 ```bash 
+# create the virtual environment 
 python3 -m venv .
-source bin/activate #on Linux environment 
+
+# activate the virtual environment
+source bin/activate # on Linux environment 
+Scripts/activate # on windows
+
+# install packages
 pip3 install -r requirements.txt
+
+# deactivate the virtual environment
+deactivate
 ```
 
 ## Sorftware achitecture 

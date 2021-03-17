@@ -1,11 +1,28 @@
 
 #from Coordinator import Prosumer
-from DReventDispatch import *
-from Battery import *
-from Optimiser import *
-from utils import *
+#from DReventDispatch import *
+from P2PSystemSim.Assets import *
+from P2PSystemSim.Optimiser import *
+#from utils import *
 from multiprocessing import Pool
 from copy import deepcopy
+
+def calcCost(x, **kwargs):
+    """
+    :param x: one solution vector
+    :param kwargs1:
+    :return: real: total cost induced by this solution vector
+    """
+    # print(x)
+    s = 0
+    for i in range(len(x)):
+
+        if x[i] >= 0:
+            s = s + x[i] * kwargs["gridPrices"][i]
+        else:
+            s = s + x[i] * kwargs["FIT"][i]
+
+    return (s)
 
 
 class CommonProblem(Problem):

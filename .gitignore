@@ -1,8 +1,10 @@
-.idea/*
-bin/*
-lib/*
-share/*
-include/*
-lib64/*
-__pycache__/*
+.idea
+bin
+lib
+share
+include
 lib64
+__pycache__
+lib64
+Scripts
+Include

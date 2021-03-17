@@ -1,7 +1,7 @@
-import abc
-from abc import ABC
+from abc import ABC, abstractmethod
 import numpy as np
-
+import sys
+import pandas as pd
 
 class Battery:
     def __init__(self, nominalCapacity, SOCmin, SOCmax, selfDischarge, chargeEfficiency, dischargeEfficiency, initialEnergy=None, timeSlot = 86400/48):
@@ -88,21 +88,21 @@ class Battery:
 
 
 #iteration/collection design pattern
-class Operator(metaclass=abc.ABCMeta):
+class Operator(ABC):
     def __init__(self, *args, **kwargs):
         if type(self) == Operator:
             raise TypeError(
                 " Operator is an interface, it cannot be instantiated. Try with a concrete operator, e.g.: AggregationIterator")
-    @abc.abstractmethod
+    @abstractmethod
     def charge(self, Pbc):
         pass
-    @abc.abstractmethod
+    @abstractmethod
     def discharge(self, Pbd):
         pass
-    @abc.abstractmethod
+    @abstractmethod
     def maximumPc(self):
         pass
-    @abc.abstractmethod
+    @abstractmethod
     def maximumPd(self):
         pass
 
@@ -166,12 +166,12 @@ class AggregationOperator(Operator):
                         #at one point pbd will be = zero
         return G
 
-class BatteryCollection(metaclass=abc.ABCMeta):
+class BatteryCollection(ABC):
     def __init__(self, *args, **kwargs):
         if type(self) == BatteryCollection:
             raise TypeError(
                 " BatteryCollection is an interface, it cannot be instantiated. Try with a concrete collection, e.g.: BatteryAggregation")
-    @abc.abstractmethod
+    @abstractmethod
     def operator(self):
         pass
 
@@ -184,7 +184,7 @@ class BatteryAggregation(BatteryCollection):
         return AggregationOperator(self._listBattery)
 
 class PhotovoltaicPanel:
-    def __init__(self,surface, efficiency):
+    def __init__(self, surface, efficiency):
         self._surface = surface
         self._efficiency = efficiency
 

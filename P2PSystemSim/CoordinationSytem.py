@@ -1,44 +1,18 @@
-import abc
-from Optimiser import Optimiser
-from DReventDispatch import *
-from Battery import *
-from Optimiser import *
-from OptimisationProblem import *
-from PriceCalculator import *
+from abc import ABC, abstractmethod
+#from DReventDispatch import *
+from P2PSystemSim.Optimiser import *
+from P2PSystemSim.OptimisationProblem import *
+from P2PSystemSim.PricingSystem import *
 
-class Prosumer:
-    def __init__(self, id, loadForecast : list, REgeneration: list, battery : Battery = None, shiftableLoadMatrix=None):
-        assert(len(loadForecast) == len(REgeneration))
-        self._ID = id
-        self.battery = None
-        if battery is not None:
-            self.set_battery(battery)
-        self._loadForecast = loadForecast
-        self._REgeneration = REgeneration
-        self._shiftableLoadMatrix = shiftableLoadMatrix
-    def set_battery(self, battery: Battery):
-        self.battery = battery
-        battery._set_owner(self)
-    def _get_ID(self):
-        return self._ID
-    def _get_Battery(self)-> Battery:
-        return self._battery
-    def _get_loadForecast(self)-> list:
-        return self._loadForecast
-    def _get_REgeneration(self)-> list:
-        return self._REgeneration
-    def _get_shiftableLoadMatrix(self) -> list:
-        return self._shiftableLoadMatrix
-    def actionDR(self) -> bool:
-        return random.choice([0, 1])
 
-class Coordinator(metaclass=abc.ABCMeta): # equivalent to java abstract class
+class Coordinator(ABC): 
 
-    def __init__(self, **kwargs):
-        self._prosumers = kwargs["prosumerList"]
-        self._gridPrices = kwargs["gridPrices"]
-        self._FIT =  kwargs["FIT"]
-        self.algorithm = kwargs["algorithm"] #string
+    def __init__(self, prosumerList, gridPrices, FIT, algorithm):
+        self._prosumers = prosumerList
+        self._gridPrices = gridPrices
+        self._FIT =  FIT
+        self.algorithm = algorithm #string
+
     def _get_loadHistory(self):
         return self._loadHistory
 
@@ -77,26 +51,30 @@ class Coordinator(metaclass=abc.ABCMeta): # equivalent to java abstract class
         return self._loadHistory
         #todo : change to real forecast formula
 
-    @abc.abstractmethod
+    @abstractmethod
     def optimise(self, algorithm):
         pass
 
-    @abc.abstractmethod
+    @abstractmethod
     def generateDRrequest(self):
         pass
 
-    @abc.abstractmethod
+    @abstractmethod
     def sendDRrequest(self):
         pass
 
-    @abc.abstractmethod
+    @abstractmethod
     def computeCommunityPricing(self, priceSceheme):
         pass
-    @abc.abstractmethod
+    @abstractmethod
     def run(self,loadForecast, REforecast, gridPrices, FIT, batteryList):
         pass
 
 class DRcoordinator(Coordinator):
+
+    def __init__(self, prosumerList, gridPrices, FIT, algorithm):
+        super().__init__(prosumerList, gridPrices, FIT, algorithm)
+        
     def optimise(self, algorithm):
         return None
 
@@ -112,6 +90,11 @@ class DRcoordinator(Coordinator):
         return None
 
 class RegularCoordinator(Coordinator):
+
+    def __init__(self, prosumerList, gridPrices, FIT, algorithm):
+        super().__init__(prosumerList, gridPrices, FIT, algorithm)
+
+    
     def generateDRrequest(self):
         """ this class doesn't redefine method generateDRrequest because it isn't its responsibility"""
         pass
@@ -128,8 +111,8 @@ class RegularCoordinator(Coordinator):
 
     def computeCommunityPricing(self, priceScheme):
         priceCalc = PriceCalculator(priceScheme)
-
         return priceCalc.generatePrices()
+
     def run(self):
         nbtimeslots = len(self._prosumers[0]._get_loadForecast())
         totalLoadForecast = np.zeros(nbtimeslots)
@@ -143,6 +126,7 @@ class RegularCoordinator(Coordinator):
         for prosumer in self._prosumers:
             batteryList.append(prosumer.battery)
         batteryAggregation = BatteryAggregation(batteryList)
+
         # create CommonProblem
         optProblem = CommonProblem(loadForecast = totalLoadForecast, REgenerationForecast=totalREforecast, batteryList=batteryList, FIT=self._FIT, gridPrices = self._gridPrices )
         # instantiate OptimisationAlgorithm
@@ -162,6 +146,3 @@ class RegularCoordinator(Coordinator):
         resultPriceDic = pricingscheme.applyPrices()
 
         return res, resultPriceDic
-
-
-
