@@ -9,7 +9,6 @@ multiprocess==0.70.11.1
 numpy==1.19.4
 pandas==1.2.0
 Pillow==8.1.0
-pkg-resources==0.0.0
 pymoo==0.4.2.1
 pyparsing==2.4.7
 PyQt5==5.15.4
