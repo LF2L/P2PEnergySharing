@@ -54,7 +54,8 @@ class G_A(OptimisationAlgorithm):
                        algorithm,
                        termination=('n_gen', param['termination'] if hasattr(param, 'termination') else 100),
                        seed=1,
-                       verbose=param['verbose'] if hasattr(param, 'verbose') else False)
+                       verbose=True)
+                       #verbose=param['verbose'] if hasattr(param, 'verbose') else False)
         # todo: changer avec le meilleur individu!!!!!!!!!!!!!!!
         return res.pop.get("X")[0]
 
