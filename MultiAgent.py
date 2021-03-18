@@ -1,37 +1,40 @@
-from OptimisationProblem import *
+from P2PSystemSim.OptimisationProblem import *
 from ConvergenceControler import *
+from P2PSystemSim.PricingSystem import *
 
 class ProsumerAgent():
-    def __init__(self, **kwargs):
-        self._prosumer = kwargs["prosumer"]
-        self._shiftableLoadMatrix = kwargs["shiftableLoadMatrix"]
+    def __init__(self, prosumer,  **kwargs):
+        self._prosumer = prosumer
+        #self._shiftableLoadMatrix = shiftableLoadMatrix
         #todo: continue
         pass
+
     def _get_prosumer(self):
         return self._prosumer
-    def _get_shiftableLoadMatrix(self):
-        return self._shiftableLoadMatrix
-    def generateBid(self, **kwargs) -> list:
+
+    # def _get_shiftableLoadMatrix(self):
+    #     return self._shiftableLoadMatrix
+
+    def generateBid(self, buyPrices, sellPrices, **kwargs) -> list:
         """
         :param kwargs: sellPrices = temp list of selling prices for each time slot buyPrices = buying prices for every time slot
         :return: temp list of the bid = demand/offer of energy
         """
-        buyPrices = kwargs["buyPrices"]
-        sellPrices = kwargs["sellPrices"]
-        prosumerAgent = ProsumerAgent(prosumer=self._prosumer, shiftableLoadMatrix=self._shiftableLoadMatrix)
-        prob = BiddingProblem(prosumeragent=prosumerAgent, sellPrices=sellPrices, buyPrices=buyPrices)
-        optimiser = Optimiser(algorithm=G_A(problem=prob, verbose=True))
-        res = optimiser.optimise(pop_size=20, termination=10)
+        #prosumerAgent = ProsumerAgent(prosumer=self._prosumer, shiftableLoadMatrix=self._prosumer._shiftableLoadMatrix)
+        prob = BiddingProblem(prosumerAgent=self, loadForecast = self._prosumer._loadForecast, REgenerationForecast= self._prosumer._REgeneration, sellPrices=sellPrices, buyPrices=buyPrices)
+        optimiser = Optimiser(algorithm=G_A(optimisationProblem=prob))
+        res = optimiser.optimise(pop_size=20, termination=10, verbose= True)
         self._prosumer._set_loadForecast(res)
         return res
 
 class CoordinatorAgent:
-    def __init__(self, **kwargs):
-        self.CAsellPrices = kwargs["gridPrices"] #will vary
-        self.CAbuyPrices = kwargs["FIT"] #will vary
-        self.gridPrices =kwargs["gridPrices"]  #stays the same
-        self.FIT = kwargs["FIT"] #stays the same
-        self.prosumerAgents = kwargs["prosumerAgentList"]
+    def __init__(self, gridPrices, FIT, prosumerAgents, **kwargs):
+        self.CAsellPrices = gridPrices #will vary
+        self.CAbuyPrices = FIT #will vary
+        self.gridPrices = gridPrices  #stays the same
+        self.FIT = FIT #stays the same
+        self.prosumerAgents = prosumerAgents
+
     def computePrices(self, pricingScheme: PricingScheme, bids= None):
         """
         :param bids: list of (lists<- bids of prosumers = temp list of energy offer/demand)
@@ -45,10 +48,11 @@ class CoordinatorAgent:
 
     def getBids(self):
         bids = []
-        for PA in self.prosumerAgents:
-            bid = PA.generateBid(buyPrices = self.CAsellPrices, sellPrices = self.CAbuyPrices)
+        for prosumAgent in self.prosumerAgents:
+            bid = prosumAgent.generateBid(buyPrices = self.CAsellPrices, sellPrices = self.CAbuyPrices)
             bids.append(bid)
         return(bids)
+
     def run(self, convergenceModel: ConvergenceControlModel, pricingScheme:PricingScheme):
         controler = ConvergenceControler(convergenceModel)
         while controler.control():

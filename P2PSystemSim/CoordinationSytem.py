@@ -51,6 +51,11 @@ class Coordinator(ABC):
         return self._loadHistory
         #todo : change to real forecast formula
 
+    def calculateSelfSufficiencyIndex(self):
+        assert (self.totalLoadForecast)
+        return (self.totalLoadForecast - GridPowerLoad) / self.totalLoadForecast
+
+
     @abstractmethod
     def optimise(self, algorithm):
         pass

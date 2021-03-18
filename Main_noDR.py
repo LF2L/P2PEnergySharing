@@ -51,7 +51,7 @@ if __name__ == '__main__':
 
     #-------------------------------------------------------------------------------------------------------------------
     # instantiate RegularCoordinator with the prosumer list, grid prices and FeedInTariff
-    coordinator = RegularCoordinator(prosumerList=[prosumer1, prosumer2, prosumer3, prosumer4],gridPrices=gridPrices, FIT=FeedInTariff, algorithm="GA")
+    coordinator = RegularCoordinator(prosumerList=[prosumer1, prosumer2, prosumer3, prosumer4], gridPrices=gridPrices, FIT=FeedInTariff, algorithm="GA")
     #run optimisation and price calculation
     res, pricedic = coordinator.run()
 

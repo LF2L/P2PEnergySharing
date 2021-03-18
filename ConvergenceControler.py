@@ -1,9 +1,10 @@
-import abc
-class ConvergenceControlModel(metaclass=abc.ABCMeta):
+from abc import ABC, abstractmethod
+
+class ConvergenceControlModel(ABC):
     def __init__(self, **kwargs):
         pass
-    pass
-    @abc.abstractmethod
+
+    @abstractmethod
     def control(self, **kwargs):
         pass
 
@@ -16,8 +17,8 @@ class StepLength(ConvergenceControlModel):
        #todo: complete
 
 class NumberIterations(ConvergenceControlModel):
-    def __init__(self, **kwargs):
-        self.maxIterations = kwargs["maxIterations"]
+    def __init__(self, maxIterations, **kwargs):
+        self.maxIterations = maxIterations
         self.nbIterations = 0
 
     def control(self, **kwargs):
@@ -32,6 +33,6 @@ class ConvergenceControler:
         self.controlModel = controlModel
 
     def control(self, **kwargs)-> bool:
-        return self.controlModel.control(kwargs)
+        return self.controlModel.control()
         #todo: complete
         return False

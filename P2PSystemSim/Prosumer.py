@@ -15,18 +15,25 @@ class Prosumer:
     def set_battery(self, battery: Battery):
         self.battery = battery
         battery._set_owner(self)
+        
     def _get_ID(self):
         return self._ID
+
     def _get_Battery(self)-> Battery:
         return self._battery
+
     def _get_loadForecast(self)-> list:
         return self._loadForecast
+
     def _get_REgeneration(self)-> list:
         return self._REgeneration
+
     def _get_shiftableLoadMatrix(self) -> list:
         return self._shiftableLoadMatrix
+
     def actionDR(self) -> bool:
         return random.choice([0, 1])
+
     def displayGraph(self):
         fig, ax = plt.subplots()
         ax.plot(range(0,len(self._REgeneration)), self._REgeneration, label="RE generation")

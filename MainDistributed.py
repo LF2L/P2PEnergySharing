@@ -1,12 +1,14 @@
-from MultiAgent import ProsumerAgent, CoordinatorAgent
-from Centralised import Prosumer
 import random
 import numpy as np
-from utils import *
-from Battery import Battery
-from PriceCalculator import SDR
+from MultiAgent import ProsumerAgent, CoordinatorAgent
+from P2PSystemSim.Prosumer import *
+from P2PSystemSim.Assets import *
+from P2PSystemSim.Prosumer import *
+from P2PSystemSim.PricingSystem import *
+
+# from utils import *
 from ConvergenceControler import NumberIterations
-random.seed = 1
+
 if __name__ == '__main__':
     # -------------------------------------problem definition----------------------------------------------------------
 
@@ -34,16 +36,10 @@ if __name__ == '__main__':
         f4.close()
     loadForecat4 = [float(lf) for lf in loadForecat4]
 
-    REgeneration1 = calcREgeneration("DonnéesIrradianceSolaire/03-01-2020", SPefficiency=0.16, SParea=180)
-
-    REgeneration2 = calcREgeneration("DonnéesIrradianceSolaire/03-01-2020", SPefficiency=0.153, SParea=650)
-
-
-    REgeneration3 = calcREgeneration("DonnéesIrradianceSolaire/03-01-2020", SPefficiency=0.144, SParea=250)
-
-    REgeneration4 = calcREgeneration("DonnéesIrradianceSolaire/03-01-2020", SPefficiency=0.16, SParea=150)
-
-
+    PV1 = PhotovoltaicPanel(surface=180, efficiency=0.16).elecProduction("DonnéesIrradianceSolaire/03-01-2020")
+    PV2 = PhotovoltaicPanel(surface=650, efficiency=0.153).elecProduction("DonnéesIrradianceSolaire/03-01-2020")
+    PV3 = PhotovoltaicPanel(surface=250, efficiency=0.144).elecProduction("DonnéesIrradianceSolaire/03-01-2020")
+    PV4 = PhotovoltaicPanel(surface=150, efficiency=0.16).elecProduction("DonnéesIrradianceSolaire/03-01-2020")
 
     battery1 = Battery(nominalCapacity=1000 * 600, SOCmin=0.2, SOCmax=0.8, selfDischarge=0, chargeEfficiency=1,
                        dischargeEfficiency=1, initialEnergy=200 * 600)
@@ -53,13 +49,14 @@ if __name__ == '__main__':
                        dischargeEfficiency=1, initialEnergy=100 * 600)
     battery4 = Battery(nominalCapacity=500* 600, SOCmin=0.2, SOCmax=0.8, selfDischarge=0, chargeEfficiency=1,
                        dischargeEfficiency=1, initialEnergy=100 * 600)
-    prosumerAgent1 = ProsumerAgent(prosumer=Prosumer(1,loadForecat1,REgeneration1,battery1), shiftableLoadMatrix= [random.randrange(-1,1) for i in range(144)])
-    prosumerAgent2 = ProsumerAgent(prosumer=Prosumer(2,loadForecat2,REgeneration2,battery2), shiftableLoadMatrix = [random.randrange(-1,1) for i in range(144)])
-    prosumerAgent3 = ProsumerAgent(prosumer=Prosumer(3, loadForecat3, REgeneration3, battery3), shiftableLoadMatrix = [random.randrange(-1,1) for i in range(144)])
-    prosumerAgent4 = ProsumerAgent(prosumer=Prosumer(4, loadForecat4, REgeneration4, battery4), shiftableLoadMatrix = [random.randrange(-1,1) for i in range(144)])
 
-    coordinatorAgent = CoordinatorAgent(prosumerAgentList=[prosumerAgent1, prosumerAgent2, prosumerAgent3, prosumerAgent4], FIT=FIT, gridPrices=gridPrices)
-    coordinatorAgent.run(pricingScheme=SDR(), convergenceModel=NumberIterations(maxIterations=8))
+    prosumerAgent1 = ProsumerAgent(prosumer=Prosumer(1, loadForecat1, PV1, battery1, [random.randrange(-1,1) for i in range(144)]) )
+    prosumerAgent2 = ProsumerAgent(prosumer=Prosumer(2, loadForecat2, PV2, battery2, shiftableLoadMatrix = [random.randrange(-1,1) for i in range(144)]) )
+    prosumerAgent3 = ProsumerAgent(prosumer=Prosumer(3, loadForecat3, PV3, battery3, shiftableLoadMatrix = [random.randrange(-1,1) for i in range(144)]) )
+    prosumerAgent4 = ProsumerAgent(prosumer=Prosumer(4, loadForecat4, PV4, battery4, shiftableLoadMatrix = [random.randrange(-1,1) for i in range(144)]) )
+
+    coordinatorAgent = CoordinatorAgent(prosumerAgents=[prosumerAgent1, prosumerAgent2, prosumerAgent3, prosumerAgent4], FIT=FIT, gridPrices=gridPrices)
+    coordinatorAgent.run(pricingScheme = SDR(gridSellPrices=gridPrices, FIT=FIT, listProsumers=[prosumerAgent1, prosumerAgent2, prosumerAgent3, prosumerAgent4] ), convergenceModel=NumberIterations(maxIterations=8))
 
 
 

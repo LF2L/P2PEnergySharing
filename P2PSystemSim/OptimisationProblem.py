@@ -109,11 +109,11 @@ class CommonProblem(Problem): # extends the problem object from Pymoo
 
 
 class BiddingProblem(Problem):
-    def __init__(self, loadForecast: list, REgenerationForecast: list, prosumer):
+    def __init__(self, loadForecast: list, REgenerationForecast: list, prosumerAgent, sellPrices, buyPrices):
         self.loadForecast = loadForecast
         self.REgenerationForecast = REgenerationForecast
-        self.prosumer = prosumer
-        self.shiftableLoadMatrix = prosumer._get_shiftableLoadMatrix()
+        self.prosumer = prosumerAgent._prosumer
+        self.shiftableLoadMatrix = self.prosumer._get_shiftableLoadMatrix()
         self.nbTimeSlots= len(loadForecast)
         xl = np.zeros(self.nbTimeSlots)
         xu = np.zeros(self.nbTimeSlots)
@@ -147,11 +147,11 @@ class BiddingProblem(Problem):
             """
 
             problem = CommonProblem(loadForecast=prosumer._get_loadForecast(), REgenerationForecast=
-            prosumer._get_REgeneration(), batteryList= [prosumer._get_Battery()], gridPrices = kwargs["gridPrices"], FIT = kwargs["FIT"])
+            prosumer._get_REgeneration(), batteryList= [prosumer._get_Battery()], gridPrices = buyPrices, FIT = sellPrices)
             optimiser = Optimiser(G_A(commonProblem=problem))
             best = optimiser.optimise()
             #compute price
-            return calcCost(best, gridPrices = kwargs["gridPrices"], FIT = kwargs["FIT"])
+            return calcCost(best, gridPrices = buyPrices, FIT = sellPrices)
 
         #for every solution call calcobj using parallel processes
         l = len(x) #number of solution vectors

@@ -5,7 +5,7 @@ from pymoo.algorithms.nsga2 import NSGA2
 from pymoo.algorithms.so_genetic_algorithm import GA
 from pymoo.factory import get_sampling, get_crossover, get_mutation, get_termination
 from pymoo.optimize import minimize
-from P2PSystemSim.OptimisationProblem import CommonProblem
+#from P2PSystemSim.OptimisationProblem import CommonProblem
 from abc import ABC, abstractmethod
 
 class OptimisationAlgorithm(ABC):
@@ -15,14 +15,14 @@ class OptimisationAlgorithm(ABC):
             raise TypeError(" OptimisationALgorithm is an interface, it cannot be instantiated. Try with a concrete algorithm, e.g.: NSGAII")
 
     @abstractmethod
-    def operate(self):
+    def operate(self, **param):
         pass
 
 class NSGAII(OptimisationAlgorithm):
     def __init__(self, optimisationProblem):
         super().__init__(optimisationProblem)
 
-    def operate(self):
+    def operate(self, **param):
         algorithm = NSGA2(
             pop_size=60,
             n_offsprings=10,
@@ -47,14 +47,14 @@ class G_A(OptimisationAlgorithm):
     def __init__(self, optimisationProblem):
         super().__init__(optimisationProblem)
 
-    def operate(self):
-        algorithm = GA(pop_size=100, eliminate_duplicates=True)
+    def operate(self, **param):
+        algorithm = GA(pop_size= param['pop_size'] if hasattr(param, 'pop_size') else 100, eliminate_duplicates=True)
 
         res = minimize(self._problem,
                        algorithm,
-                       termination=('n_gen', 100),
+                       termination=('n_gen', param['termination'] if hasattr(param, 'termination') else 100),
                        seed=1,
-                       verbose=True)
+                       verbose=param['verbose'] if hasattr(param, 'verbose') else False)
         # todo: changer avec le meilleur individu!!!!!!!!!!!!!!!
         return res.pop.get("X")[0]
 
@@ -63,8 +63,8 @@ class Optimiser:
     def __init__(self, algorithm):
         self._algorithm = algorithm
 
-    def optimise(self):
-        self.optimisationResults = self._algorithm.operate()
+    def optimise(self, **optiParam ):
+        self.optimisationResults = self._algorithm.operate(param= optiParam)
         self.displayGraph()
         return self.optimisationResults
         #todo : add visualisation or other manipulations
