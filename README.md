@@ -29,6 +29,7 @@ source bin/activate # on Linux environment
 Scripts/activate # on windows
 
 # install packages
+# on windows remove pkg-resources==0.0.0 from requirements.txt
 pip3 install -r requirements.txt
 
 # deactivate the virtual environment
@@ -42,4 +43,4 @@ deactivate
 ![structure](docs/DistributedPricingSchemes.png)
 ![structure](docs/Batterycollection.png)
 ![structure](docs/Predictor.png)
-![structure](docs/PricingSchemes.png)
+![structure](docs/pricingSchemes.png)
