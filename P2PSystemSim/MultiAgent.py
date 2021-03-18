@@ -1,5 +1,5 @@
 from P2PSystemSim.OptimisationProblem import *
-from ConvergenceControler import *
+from P2PSystemSim.ConvergenceControler import *
 from P2PSystemSim.PricingSystem import *
 
 class ProsumerAgent():

@@ -1,13 +1,11 @@
 import random
 import numpy as np
-from MultiAgent import ProsumerAgent, CoordinatorAgent
+from P2PSystemSim.MultiAgent import ProsumerAgent, CoordinatorAgent
 from P2PSystemSim.Prosumer import *
 from P2PSystemSim.Assets import *
-from P2PSystemSim.Prosumer import *
 from P2PSystemSim.PricingSystem import *
+# from P2PSystemSim.ConvergenceControler import NumberIterations
 
-# from utils import *
-from ConvergenceControler import NumberIterations
 
 if __name__ == '__main__':
     # -------------------------------------problem definition----------------------------------------------------------
@@ -51,9 +49,9 @@ if __name__ == '__main__':
                        dischargeEfficiency=1, initialEnergy=100 * 600)
 
     prosumerAgent1 = ProsumerAgent(prosumer=Prosumer(1, loadForecat1, PV1, battery1, [random.randrange(-1,1) for i in range(144)]) )
-    prosumerAgent2 = ProsumerAgent(prosumer=Prosumer(2, loadForecat2, PV2, battery2, shiftableLoadMatrix = [random.randrange(-1,1) for i in range(144)]) )
-    prosumerAgent3 = ProsumerAgent(prosumer=Prosumer(3, loadForecat3, PV3, battery3, shiftableLoadMatrix = [random.randrange(-1,1) for i in range(144)]) )
-    prosumerAgent4 = ProsumerAgent(prosumer=Prosumer(4, loadForecat4, PV4, battery4, shiftableLoadMatrix = [random.randrange(-1,1) for i in range(144)]) )
+    prosumerAgent2 = ProsumerAgent(prosumer=Prosumer(2, loadForecat2, PV2, battery2, [random.randrange(-1,1) for i in range(144)]) )
+    prosumerAgent3 = ProsumerAgent(prosumer=Prosumer(3, loadForecat3, PV3, battery3, [random.randrange(-1,1) for i in range(144)]) )
+    prosumerAgent4 = ProsumerAgent(prosumer=Prosumer(4, loadForecat4, PV4, battery4, [random.randrange(-1,1) for i in range(144)]) )
 
     coordinatorAgent = CoordinatorAgent(prosumerAgents=[prosumerAgent1, prosumerAgent2, prosumerAgent3, prosumerAgent4], FIT=FIT, gridPrices=gridPrices)
     coordinatorAgent.run(pricingScheme = SDR(gridSellPrices=gridPrices, FIT=FIT, listProsumers=[prosumerAgent1, prosumerAgent2, prosumerAgent3, prosumerAgent4] ), convergenceModel=NumberIterations(maxIterations=8))
