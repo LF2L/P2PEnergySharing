@@ -80,8 +80,10 @@ class Battery:
         else:
             self._set_energyLevel(W_before * (1 - sigma) - Pd_max * (1 / muD_i) * timeSlot)
             return pbd - Pd_max
+
     def maximumPc(self):
         return (self._SOCmax * self._nominalCapacity- self._energyLevel * (1 - self._selfDischarge)) / (self._chargeEfficiency * self._timeSlot)
+
     def maximumPd(self):
         return (self._dischargeEfficiency/self._timeSlot)*(self._energyLevel*(1 - self._selfDischarge) - self._SOCmin*self._nominalCapacity)
 
@@ -188,7 +190,7 @@ class PhotovoltaicPanel:
         self._surface = surface
         self._efficiency = efficiency
 
-    def elecProduction(GHIfilepath):
+    def elecProduction(self, GHIfilepath):
         df = pd.read_csv(GHIfilepath)
         GHIlist = df["GHI"].tolist()
         return [ghi*self._surface*self._efficiency for ghi in GHIlist]
