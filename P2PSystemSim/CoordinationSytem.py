@@ -86,6 +86,7 @@ class DRcoordinator(Coordinator):
 
     def computeCommunityPricing(self, priceScheme):
         return None
+
     def run(self,loadForecast, REforecast, gridPrices, FIT, batteryList ):
         return None
 

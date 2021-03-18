@@ -1,24 +1,27 @@
-import abc
 import numpy as np
+import matplotlib.pyplot as plt
 from pymoo.model.problem import Problem
 from pymoo.algorithms.nsga2 import NSGA2
 from pymoo.algorithms.so_genetic_algorithm import GA
 from pymoo.factory import get_sampling, get_crossover, get_mutation, get_termination
 from pymoo.optimize import minimize
 from P2PSystemSim.OptimisationProblem import CommonProblem
+from abc import ABC, abstractmethod
 
-class OptimisationAlgorithm(metaclass=abc.ABCMeta):
-    def __init__(self, *args, ** kwargs):
+class OptimisationAlgorithm(ABC):
+    def __init__(self, optimisationProblem, *args, ** kwargs):
+        self._problem = optimisationProblem
         if type(self) == OptimisationAlgorithm:
             raise TypeError(" OptimisationALgorithm is an interface, it cannot be instantiated. Try with a concrete algorithm, e.g.: NSGAII")
 
-    @abc.abstractmethod
+    @abstractmethod
     def operate(self):
         pass
 
 class NSGAII(OptimisationAlgorithm):
-    def __init__(self, commonProblem):
-        self._commonProblem = commonProblem
+    def __init__(self, optimisationProblem):
+        super().__init__(optimisationProblem)
+
     def operate(self):
         algorithm = NSGA2(
             pop_size=60,
@@ -31,21 +34,23 @@ class NSGAII(OptimisationAlgorithm):
 
         termination = get_termination("n_gen", 100)
 
-        res = minimize(self._commonProblem,
+        res = minimize(self._problem,
                        algorithm,
                        termination,
                        seed=1,
-                       pf=self._commonProblem.pareto_front(use_cache=False),
+                       pf=self._problem.pareto_front(use_cache=False),
                        save_history=True,
                        verbose=True)
         return res.pop.get["X"][0]
+
 class G_A(OptimisationAlgorithm):
-    def __init__(self, commonProblem):
-        self._commonProblem = commonProblem
+    def __init__(self, optimisationProblem):
+        super().__init__(optimisationProblem)
+
     def operate(self):
         algorithm = GA(pop_size=100, eliminate_duplicates=True)
 
-        res = minimize(self._commonProblem,
+        res = minimize(self._problem,
                        algorithm,
                        termination=('n_gen', 100),
                        seed=1,
@@ -54,10 +59,25 @@ class G_A(OptimisationAlgorithm):
         return res.pop.get("X")[0]
 
 class Optimiser:
+
     def __init__(self, algorithm):
         self._algorithm = algorithm
+
     def optimise(self):
-        return self._algorithm.operate()
+        self.optimisationResults = self._algorithm.operate()
+        self.displayGraph()
+        return self.optimisationResults
         #todo : add visualisation or other manipulations
+
+    def displayGraph(self, title = 'Power exchange optimisation'):
+        fig, ax = plt.subplots()
+        ax.plot(range(0,len(self.optimisationResults)), self.optimisationResults, label="power (Wh)")
+        # ax.plot(range(0,len(self._loadForecast)), self._loadForecast, label="Load forecast")
+        #ax.plot(len(self._REgeneration), self._REgeneration, len(self._loadForecast), self._loadForecast)
+        ax.set(xlabel='timeslots', ylabel='Power (Wh)', title='{}'.format( title))
+        ax.grid()
+        ax.legend( loc='upper left', borderaxespad=0.)
+        plt.show()
+
 
 

@@ -25,7 +25,6 @@ def calcCost(x, **kwargs):
     return (s)
 
 
-
 class CommonProblem(Problem): # extends the problem object from Pymoo
 
     def __init__(self,loadForecast, REgenerationForecast, **kwargs):
