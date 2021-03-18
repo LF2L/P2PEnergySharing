@@ -25,7 +25,8 @@ def calcCost(x, **kwargs):
     return (s)
 
 
-class CommonProblem(Problem):
+
+class CommonProblem(Problem): # extends the problem object from Pymoo
 
     def __init__(self,loadForecast, REgenerationForecast, **kwargs):
         assert(len(loadForecast) == len(REgenerationForecast))
@@ -41,7 +42,7 @@ class CommonProblem(Problem):
         :param kwargs: dictionary that includes: batteryList (objects of class Battery), nominalCapacity (battery size), grid energy prices and feed-in
         tariffs for each time slot, battery charge and discharge efficiencies and battery self-discharge
         """
-        timeSlot = 86400/self.nbTimeSlots #time slot in seconds
+        timeSlot = 86400/self.nbTimeSlots #timeslot duraction in seconds
         xl = np.zeros(self.nbTimeSlots)
         xu = np.zeros(self.nbTimeSlots)
         for i in range(0, self.nbTimeSlots):
