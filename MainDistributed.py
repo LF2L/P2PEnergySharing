@@ -4,7 +4,7 @@ from P2PSystemSim.MultiAgent import ProsumerAgent, CoordinatorAgent
 from P2PSystemSim.Prosumer import *
 from P2PSystemSim.Assets import *
 from P2PSystemSim.PricingSystem import *
-# from P2PSystemSim.ConvergenceControler import NumberIterations
+from P2PSystemSim.ConvergenceControler import NumberIterations
 
 
 if __name__ == '__main__':
