@@ -10,7 +10,7 @@ def SDarray(prosumers):
         netLoad = prosumer._get_loadForecast()
         REgen = prosumer._get_REgeneration()
         SD = np.zeros(len(netLoad))
-        battery = deepcopy(prosumer.battery)
+        battery = deepcopy(prosumer._battery)
         for j in range(len(netLoad)):
             resultPower = netLoad[j] - REgen[j]
             if resultPower > 0:  # if REgeneration wasn't able to cover net load

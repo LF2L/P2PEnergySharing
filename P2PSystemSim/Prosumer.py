@@ -5,7 +5,7 @@ class Prosumer:
     def __init__(self, id, loadForecast : list, REgeneration: list, battery : Battery = None, shiftableLoadMatrix=None):
         assert(len(loadForecast) == len(REgeneration))
         self._ID = id
-        self.battery = None
+        self._battery = None
         if battery is not None:
             self.set_battery(battery)
         self._loadForecast = loadForecast
@@ -13,7 +13,7 @@ class Prosumer:
         self._shiftableLoadMatrix = shiftableLoadMatrix
 
     def set_battery(self, battery: Battery):
-        self.battery = battery
+        self._battery = battery
         battery._set_owner(self)
         
     def _get_ID(self):
@@ -42,5 +42,5 @@ class Prosumer:
         ax.set(xlabel='timeslots', ylabel='Power (Wh)', title='Power consumption and production prosumer {}'.format(self._ID))
         ax.grid()
         #fig.savefig("test.png")
-        ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
+        ax.legend(loc='upper left', borderaxespad=0.)
         plt.show()

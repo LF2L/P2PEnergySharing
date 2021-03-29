@@ -41,7 +41,7 @@ class NSGAII(OptimisationAlgorithm):
                        pf=self._problem.pareto_front(use_cache=False),
                        save_history=True,
                        verbose=True)
-        return res.pop.get["X"][0]
+        return res.pop.get("X")[0]
 
 class G_A(OptimisationAlgorithm):
     def __init__(self, optimisationProblem):
@@ -50,9 +50,12 @@ class G_A(OptimisationAlgorithm):
     def operate(self, **param):
         algorithm = GA(pop_size= param['pop_size'] if hasattr(param, 'pop_size') else 100, eliminate_duplicates=True)
 
+        termination = get_termination("n_gen", 20)
+
         res = minimize(self._problem,
                        algorithm,
-                       termination=('n_gen', param['termination'] if hasattr(param, 'termination') else 100),
+                       termination,
+                       #termination=get_termination('n_gen', param['termination'] if hasattr(param, 'termination') else 100),
                        seed=1,
                        verbose=True)
                        #verbose=param['verbose'] if hasattr(param, 'verbose') else False)
@@ -66,7 +69,7 @@ class Optimiser:
 
     def optimise(self, **optiParam ):
         self.optimisationResults = self._algorithm.operate(param= optiParam)
-        self.displayGraph()
+        #self.displayGraph()
         return self.optimisationResults
         #todo : add visualisation or other manipulations
 

@@ -130,7 +130,7 @@ class RegularCoordinator(Coordinator):
         # create batteryAggregation
         batteryList = []
         for prosumer in self._prosumers:
-            batteryList.append(prosumer.battery)
+            batteryList.append(prosumer._battery)
         batteryAggregation = BatteryAggregation(batteryList)
 
         # create CommonProblem

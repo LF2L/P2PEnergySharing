@@ -17,14 +17,17 @@ class ProsumerAgent():
 
     def generateBid(self, buyPrices, sellPrices, **kwargs) -> list:
         """
-        :param kwargs: sellPrices = temp list of selling prices for each time slot buyPrices = buying prices for every time slot
+        :param kwargs: 
+        sellPrices = temp list of selling prices for each time slot 
+        buyPrices = buying prices for every time slot
         :return: temp list of the bid = demand/offer of energy
         """
         #prosumerAgent = ProsumerAgent(prosumer=self._prosumer, shiftableLoadMatrix=self._prosumer._shiftableLoadMatrix)
         prob = BiddingProblem(prosumerAgent=self, loadForecast = self._prosumer._loadForecast, REgenerationForecast= self._prosumer._REgeneration, sellPrices=sellPrices, buyPrices=buyPrices)
         optimiser = Optimiser(algorithm=G_A(optimisationProblem=prob))
-        res = optimiser.optimise(pop_size=20, termination=10, verbose= True)
-        self._prosumer._set_loadForecast(res)
+        #res = optimiser.optimise(pop_size=20, termination=10, verbose= True)
+        res = optimiser.optimise()
+        self._prosumer._loadForecast= res
         return res
 
 class CoordinatorAgent:
@@ -49,6 +52,7 @@ class CoordinatorAgent:
     def getBids(self):
         bids = []
         for prosumAgent in self.prosumerAgents:
+            print(f"prosumer: {prosumAgent._prosumer._ID}")
             bid = prosumAgent.generateBid(buyPrices = self.CAsellPrices, sellPrices = self.CAbuyPrices)
             bids.append(bid)
         return(bids)
@@ -56,6 +60,7 @@ class CoordinatorAgent:
     def run(self, convergenceModel: ConvergenceControlModel, pricingScheme:PricingScheme):
         controler = ConvergenceControler(convergenceModel)
         while controler.control():
+            print(f"iteration: {controler.controlModel.nbIterations}")
             bids = self.getBids()
             self.CAsellPrices, self.CAbuyPrices = self.computePrices(pricingScheme=pricingScheme, bids=bids)
         for PA in self.prosumerAgents:
