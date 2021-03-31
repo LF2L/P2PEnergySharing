@@ -6,11 +6,10 @@ class ProsumerAgent():
     def __init__(self, prosumer,  **kwargs):
         self._prosumer = prosumer
         #self._shiftableLoadMatrix = shiftableLoadMatrix
-        #todo: continue
         pass
 
-    def _get_prosumer(self):
-        return self._prosumer
+    # def _get_prosumer(self):
+    #     return self._prosumer
 
     # def _get_shiftableLoadMatrix(self):
     #     return self._shiftableLoadMatrix
@@ -24,11 +23,12 @@ class ProsumerAgent():
         """
         #prosumerAgent = ProsumerAgent(prosumer=self._prosumer, shiftableLoadMatrix=self._prosumer._shiftableLoadMatrix)
         prob = BiddingProblem(prosumerAgent=self, loadForecast = self._prosumer._loadForecast, REgenerationForecast= self._prosumer._REgeneration, sellPrices=sellPrices, buyPrices=buyPrices)
-        optimiser = Optimiser(algorithm=G_A(optimisationProblem=prob))
-        #res = optimiser.optimise(pop_size=20, termination=10, verbose= True)
-        res = optimiser.optimise()
-        self._prosumer._loadForecast= res
-        return res
+        bidOptimiser = Optimiser(G_A(optimisationProblem=prob))
+        optimisdBids = bidOptimiser.optimise()
+        #print(optimisdBids.pop.get())
+        #res = optimiser.optimise()
+        self._prosumer._loadForecast= optimisdBids
+        return optimisdBids
 
 class CoordinatorAgent:
     def __init__(self, gridPrices, FIT, prosumerAgents, **kwargs):
@@ -44,7 +44,7 @@ class CoordinatorAgent:
         :param pricingScheme:  object of class Pricing Scheme
         :return: two temp lists: buy and sell prices in the energy pool
         """
-        prosumers = [PA._get_prosumer() for PA in self.prosumerAgents]
+        prosumers = [PA._prosumer for PA in self.prosumerAgents]
         pricecalc = PriceCalculator(pricingScheme=pricingScheme)
         Psell, Pbuy, _= pricecalc.generatePrices(gridBuyPrice=self.CAsellPrices, gridSellPrice= self.CAbuyPrices, listProsumers=prosumers)
         return Psell, Pbuy
@@ -64,5 +64,5 @@ class CoordinatorAgent:
             bids = self.getBids()
             self.CAsellPrices, self.CAbuyPrices = self.computePrices(pricingScheme=pricingScheme, bids=bids)
         for PA in self.prosumerAgents:
-            print(PA._get_prosumer._get_loadForecast())
+            print(PA._prosumer._loadForecast)
 

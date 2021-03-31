@@ -50,15 +50,15 @@ if __name__ == '__main__':
     battery4 = Battery(nominalCapacity=500* 600, SOCmin=0.2, SOCmax=0.8, selfDischarge=0, chargeEfficiency=1,
                        dischargeEfficiency=1, initialEnergy=100 * 600)
 
-    prosumerAgent1 = ProsumerAgent(prosumer=Prosumer(1, loadForecat1, PV1, battery1, [random.randrange(-1,1) for i in range(nbOfStepInOneDay)]) )
-    prosumerAgent2 = ProsumerAgent(prosumer=Prosumer(2, loadForecat2, PV2, battery2, [random.randrange(-1,1) for i in range(nbOfStepInOneDay)]) )
-    prosumerAgent3 = ProsumerAgent(prosumer=Prosumer(3, loadForecat3, PV3, battery3, [random.randrange(-1,1) for i in range(nbOfStepInOneDay)]) )
-    prosumerAgent4 = ProsumerAgent(prosumer=Prosumer(4, loadForecat4, PV4, battery4, [random.randrange(-1,1) for i in range(nbOfStepInOneDay)]) )
+    prosumerAgent1 = ProsumerAgent(prosumer=Prosumer(1, loadForecat1, PV1, battery1, [random.uniform(-1,1) for i in range(nbOfStepInOneDay)]) )
+    prosumerAgent2 = ProsumerAgent(prosumer=Prosumer(2, loadForecat2, PV2, battery2, [random.uniform(-1,1) for i in range(nbOfStepInOneDay)]) )
+    prosumerAgent3 = ProsumerAgent(prosumer=Prosumer(3, loadForecat3, PV3, battery3, [random.uniform(-1,1) for i in range(nbOfStepInOneDay)]) )
+    prosumerAgent4 = ProsumerAgent(prosumer=Prosumer(4, loadForecat4, PV4, battery4, [random.uniform(-1,1) for i in range(nbOfStepInOneDay)]) )
 
     coordinatorAgent = CoordinatorAgent(prosumerAgents=[prosumerAgent1, prosumerAgent2, prosumerAgent3, prosumerAgent4], FIT=FIT, gridPrices=gridPrices)
     # define pricing method
     pircingMtd = SDR(gridSellPrices=gridPrices, FIT=FIT, listProsumers=[prosumerAgent1, prosumerAgent2, prosumerAgent3, prosumerAgent4] )
-    coordinatorAgent.run(pricingScheme = pircingMtd, convergenceModel=NumberIterations(maxIterations=8))
+    coordinatorAgent.run(pricingScheme = pircingMtd, convergenceModel=NumberIterations(maxIterations=1))
 
 
 

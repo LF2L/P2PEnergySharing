@@ -7,28 +7,7 @@ from P2PSystemSim.Optimiser import *
 from multiprocessing import Pool
 from copy import deepcopy
 from functools import partial
-
-def calcCost(x, **kwargs):
-    """
-
-    :param x: one solution vector (size = nb of timeslot in a day)
-    :param kwargs1:
-    :return: real: total cost induced by this solution vector
-    """
-    # print(x)
-
-    s = 0
-    for i in range(len(x)):
-        
-        if x[i] >= 0:
-            # if transation is positive, apply grid price 
-            s = s + x[i] * kwargs["gridPrices"][i]
-        else:
-            # if transation is nagtive, apply Feed in tariff 
-            s = s + x[i] * kwargs["FIT"][i]
-
-    return (s)
-
+import numpy as np
 
 class CommonProblem(Problem): # extends the problem object from Pymoo
 
@@ -57,23 +36,28 @@ class CommonProblem(Problem): # extends the problem object from Pymoo
             xl[i] = - (totalNominalCapacity + self.REgenerationForecast[i])
             # the maximum i can sell is the maximum i can have available,
             # which is the maximum I can have in storage plus all i can produce
-        super().__init__(n_var=len(loadForecast), n_obj=1, n_constr=len(loadForecast), xl=xl, xu=xu, elementwise_evaluation=False)
+        super().__init__(n_var=len(loadForecast), n_obj=1, n_constr=1, xl=xl, xu=xu, elementwise_evaluation=False)
 
-
-    def _evaluate(self, x, out, *args, **kwargs):
+    def calcCost(self, x, **kwargs):
+        """
+        :param x: one solution vector (size = nb of timeslot in a day)
+        :param kwargs1:
+        :return: real: total cost induced by this solution vector
         """
 
-        :param x: all solutions because elemenwise_evaluation = False
-        :param out:
-        :param args:
-        :param kwargs:
-        :return:
-        """
+        s = 0
+        for i in range(len(x)):
+            
+            if x[i] >= 0:
+                # if transation is positive, apply grid price 
+                s = s + x[i] * kwargs["gridPrices"][i]
+            else:
+                # if transation is nagtive, apply Feed in tariff 
+                s = s + x[i] * kwargs["FIT"][i]
 
-        f = [calcCost(xi, gridPrices=self.Parameters["gridPrices"], FIT = self.Parameters["FIT"]) for xi in x]
-        out["F"] =  np.array(f)
+        return (s)
 
-        def calcConstr(x, **kwargs2):
+    def calcConstr(self, x, **kwargs2):
             """
             this function computes the constraint functions values (144 = 3*48 constraints)
             :param x: one solution vector, i.e. transactions with the grid for each time-slot of the day
@@ -109,37 +93,31 @@ class CommonProblem(Problem): # extends the problem object from Pymoo
 
             return G
 
-        G = [calcConstr(xi, REgenerationForecast = self.REgenerationForecast, loadForecast = self.loadForecast, batteryList=self.BatteryList) for xi in x]
-        out["G"] = np.column_stack([G])
+    def _evaluate(self, X, out, *args, **kwargs):
+        #print(f"Number of variables: {len(X)}")
+        """
+        :param x: all solutions because elemenwise_evaluation = False
+        :param out:
+        :param args:
+        :param kwargs:
+        :return:
+        """
 
+        # generate the objectives for the optimization 
+        f1 = [self.calcCost(xi, gridPrices=self.Parameters["gridPrices"], FIT = self.Parameters["FIT"]) for xi in X]
+        out["F"] =  np.column_stack([f1])
 
-# def calcconstrBP(x, loadForecast):
-#     """
-#     :param x: one solution
-#     :param loadForecast: the prosumer's load forecast
-#     :return: real that must be < 0
-#     """
-#     return sum(x) -sum(loadForecast) -(1e-5) #turning equality constraint into inequality constraint
-
-def calcostBP(bidProblem, x,  **kwargs):
-    """
-    :param x: one solution = one temp list of netLoads after shifting
-    :param prosumer:
-    :return:
-    """
-    prosumer = bidProblem.prosumer
-    problem = CommonProblem(loadForecast=prosumer._get_loadForecast(), REgenerationForecast=
-    prosumer._get_REgeneration(), batteryList= [prosumer._get_Battery()], gridPrices = bidProblem.buyPrices, FIT = bidProblem.sellPrices)
-    optimiser = Optimiser(G_A(optimisationProblem=problem))
-    best = optimiser.optimise()
-    #compute price
-    return calcCost(best, gridPrices = bidProblem.buyPrices, FIT = bidProblem.sellPrices)
+        # generate the constraints for the optimization 
+        g1 = [self.calcConstr(xi, REgenerationForecast = self.REgenerationForecast, loadForecast = self.loadForecast, batteryList=self.BatteryList) for xi in X]
+        out["G"] = np.column_stack([g1])
 
 class BiddingProblem(Problem):
     def __init__(self, loadForecast: list, REgenerationForecast: list, prosumerAgent, sellPrices, buyPrices):
+        
         self.loadForecast = loadForecast
         self.REgenerationForecast = REgenerationForecast
         self.prosumer = prosumerAgent._prosumer
+        self.proID= prosumerAgent._prosumer._ID
         self.shiftableLoadMatrix = self.prosumer._get_shiftableLoadMatrix()
         self.nbTimeSlots= len(loadForecast)
         self.buyPrices = buyPrices
@@ -147,11 +125,41 @@ class BiddingProblem(Problem):
         xl = np.zeros(self.nbTimeSlots)
         xu = np.zeros(self.nbTimeSlots)
         for i in range(0, self.nbTimeSlots):
-            xl[i] = loadForecast[i]*self.shiftableLoadMatrix[i] if self.shiftableLoadMatrix[i]<0 else loadForecast[i]  #if we can move some of the current power load to another time slot
-            xu[i] = loadForecast[i]*self.shiftableLoadMatrix[i] if self.shiftableLoadMatrix[i]> 0 else loadForecast[i] #if we can add some more power load to the current time slot
-        super().__init__(n_var=len(loadForecast), n_obj=1, n_constr=1, xl=xl, xu=xu, elementwise_evaluation=False)
+            # xl : lower variable boundaries
+            xl[i] = self.loadForecast[i]*self.shiftableLoadMatrix[i] if self.shiftableLoadMatrix[i] <0 else self.loadForecast[i]   #if we can move some of the current power load to another time slot
+            # xu : upper variable boundaries
+            xu[i] = self.loadForecast[i]*self.shiftableLoadMatrix[i] if self.shiftableLoadMatrix[i]> 0 else self.loadForecast[i] #if we can add some more power load to the current time slot
+        super().__init__(n_var=self.nbTimeSlots, n_obj=1, n_constr=1, xl=xl, xu=xu, elementwise_evaluation=False)
+    
+    def calcost(self, x,  **kwargs):
+        """
+        :param x: one solution = one temp list of netLoads after shifting
+        :param prosumer:
+        :return:
+        """
+        prosumer = self.prosumer
+        prosumerProblem = CommonProblem(loadForecast=prosumer._get_loadForecast(), REgenerationForecast=
+        prosumer._get_REgeneration(), batteryList= [prosumer._get_Battery()], gridPrices = self.buyPrices, FIT = self.sellPrices)
+        prosumerOptimiser = Optimiser(G_A(optimisationProblem=prosumerProblem))
+        best = prosumerOptimiser.optimise(pop_size=20, termination=5, verbose= False)
+        #print(f"length best: {best}")
 
-    def _evaluate(self, x, out, *args, **kwargs):
+        #compute price
+        s = 0
+        for i in range(len(best)):
+            
+            if x[i] >= 0:
+                # if transation is positive, apply grid price 
+                s = s + x[i] * self.sellPrices[i]
+            else:
+                # if transation is nagtive, apply Feed in tariff 
+                s = s + x[i] * self.buyPrices[i]
+
+        return (s)
+
+        #return calcCost(best, gridPrices = self.buyPrices, FIT = self.sellPrices)
+
+    def _evaluate(self, X, out, *args, **kwargs):
         """
         :param x: all solutions because elementwise_evaluation = False
         :param out:
@@ -159,37 +167,19 @@ class BiddingProblem(Problem):
         :param kwargs:
         :return:
         """
-        def calcconstr(x, loadForecast):
-            """
-            :param x: one solution
-            :param loadForecast: the prosumer's load forecast
-            :return: real that must be < 0
-            """
-            return sum(x) -sum(loadForecast) -(1e-5) #turning equality constraint into inequality constraint
-
-        G = [calcconstr(xi, self.loadForecast) for xi in x]
-        out["G"] = np.column_stack([G])
         
-        # def calcost(x, prosumer, **kwargs):
-        #     """
-        #     :param x: one solution = one temp list of netLoads after shifting
-        #     :param prosumer:
-        #     :return:
-        #     """
-
-        #     problem = CommonProblem(loadForecast=prosumer._get_loadForecast(), REgenerationForecast=
-        #     prosumer._get_REgeneration(), batteryList= [prosumer._get_Battery()], gridPrices = buyPrices, FIT = sellPrices)
-        #     optimiser = Optimiser(G_A(commonProblem=problem))
-        #     best = optimiser.optimise()
-        #     #compute price
-        #     return calcCost(best, gridPrices = buyPrices, FIT = sellPrices)
+        g1 = np.sum(X) - (np.sum(self.loadForecast) * np.ones(len(X))) -(1e-3)
+        # generate the constraints for the optimization 
+        out["G"] = np.column_stack([g1])
 
         #for every solution call calcobj using parallel processes
-        l = len(x) #number of solution vectors
-        p = Pool(4) #one process for every solution
-        func = partial(calcostBP, self)
-        F = p.map(func, x) #list of costs for every solution
+        #l = len(X) #number of solution vectors
+        p = Pool(8) #one process for every solution
+        #func = partial()
+        f1 = p.map(self.calcost, X) #list of costs for every solution
         # F = [calcostBP(bidProblem= self, x= xi) for xi in x]
-        out["F"] = np.array(F)
+
+        # generate the objectives for the optimization 
+        out["F"] =  np.column_stack([f1])
 
 

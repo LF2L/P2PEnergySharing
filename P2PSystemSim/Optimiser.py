@@ -48,17 +48,17 @@ class G_A(OptimisationAlgorithm):
         super().__init__(optimisationProblem)
 
     def operate(self, **param):
-        algorithm = GA(pop_size= param['pop_size'] if hasattr(param, 'pop_size') else 100, eliminate_duplicates=True)
-
-        termination = get_termination("n_gen", 20)
+        populationSize = param['pop_size'] if hasattr(param, 'pop_size') else 100
+        termination = get_termination("n_gen", 10)
+        isVerbose = param['verbose'] if hasattr(param, 'verbose') else False
+        algorithm = GA(pop_size= populationSize, eliminate_duplicates=True)
 
         res = minimize(self._problem,
                        algorithm,
                        termination,
-                       #termination=get_termination('n_gen', param['termination'] if hasattr(param, 'termination') else 100),
+                       #return_least_infeasible=True,
                        seed=1,
-                       verbose=True)
-                       #verbose=param['verbose'] if hasattr(param, 'verbose') else False)
+                       verbose= isVerbose)
         # todo: changer avec le meilleur individu!!!!!!!!!!!!!!!
         return res.pop.get("X")[0]
 

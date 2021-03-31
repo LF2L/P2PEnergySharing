@@ -103,13 +103,12 @@ class SDR(PricingScheme):
         return SDarray(prosumers)
 
     def generatePrices(self, **kwargs):
-
-        # gridSellPrice = kwargs["gridPrices"]  # temporal 1D array
-        # gridBuyPrice = kwargs["FIT"]  # temporal 1D array
-        # prosumers = kwargs["listProsumers"]  # list<Prosumer>
+        gridSellPrices = kwargs["gridPrices"] if "gridPrices" in kwargs else self.gridSellPrices # temporal 1D array
+        gridBuyPrices = kwargs["FIT"] if "FIT" in kwargs else self.gridBuyPrices # temporal 1D array
+        prosumers = kwargs["listProsumers"] if "listProsumers" in kwargs else self.prosumers# list<Prosumer>
         Psell=[]
         Pbuy = []
-        tempSDarray = self.SDarray(self.prosumers)
+        tempSDarray = self.SDarray(prosumers)
         l = len(tempSDarray)
         for j in range(len(tempSDarray[0])): #for each timeslot
             tempDarray_h = [tempSDarray[h][j] if tempSDarray[h][j]>0 else 0 for h in range(len(tempSDarray))]
@@ -117,8 +116,8 @@ class SDR(PricingScheme):
             TDP_h = sum(tempDarray_h)   # total demand  power for time slot h
             TSP_h = - sum(tempSarray_h) # total supply power for time slot h made positive
             SDR_h = TSP_h/TDP_h if TDP_h!= 0 else np.infty
-            Psell_h = self.gridSellPrices[j] if SDR_h>1 else  (self.gridSellPrices[j] * self.gridBuyPrices[j])/((self.gridBuyPrices[j] - self.gridSellPrices[j])*SDR_h +self.gridSellPrices[j])
-            Pbuy_h  = self.gridSellPrices[j] if SDR_h>1 else  Psell_h*SDR_h + self.gridBuyPrices[j]*(1 - SDR_h)
+            Psell_h = gridSellPrices[j] if SDR_h>1 else  (gridSellPrices[j] * gridBuyPrices[j])/((gridBuyPrices[j] - gridSellPrices[j])*SDR_h +gridSellPrices[j])
+            Pbuy_h  = gridSellPrices[j] if SDR_h>1 else  Psell_h*SDR_h + gridBuyPrices[j]*(1 - SDR_h)
             Psell.append(Psell_h)
             Pbuy.append(Pbuy_h)
 
@@ -145,27 +144,29 @@ class SDR(PricingScheme):
         return resultDic
 
 
-# class PriceCalculator:
-#     def __init__(self, pricingScheme: PricingScheme):
-#         self._pricingScheme = pricingScheme
-#         #self.SDarray = None
-#         self.Pbuy = None
-#         self.Psell = None
-#     def generatePrices(self):
-#         # todo: find common manipulations for all possible schemes (multi-agent bidding included)
-#         Psell, Pbuy, SDarray = self._pricingScheme.generatePrices()
-#         self.Psell = Psell
-#         self.Pbuy = Pbuy
-#         self.SDarray = SDarray
-#         return Psell, Pbuy, SDarray
-#     def applyPrices(self, x):
-#         #assert(len(self.SDarray)==len(listProsumers))
-#         """
-#         :param SDarray: list of (lists <-temp list of supply and demand of prosumer i taking into consideration their REgeneration, net loads and battery energy levels at each timeslot)
-#         :return: dictionary of prosumer ID : total price for the day (price to pay or to recieve)
-#         """
+class PriceCalculator:
+    def __init__(self, pricingScheme: PricingScheme):
+        self._pricingScheme = pricingScheme
+        #self.SDarray = None
+        self.Pbuy = None
+        self.Psell = None
+    def generatePrices(self, gridBuyPrice, gridSellPrice, listProsumers):
+        # todo: find common manipulations for all possible schemes (multi-agent bidding included)
+        pricingscheme = self._pricingScheme
+        Psell, Pbuy, SDarray = pricingscheme.generatePrices(gridPrices= gridBuyPrice, FIT=gridSellPrice, listProsumers=listProsumers)
+        self.Psell = Psell
+        self.Pbuy = Pbuy
+        self.SDarray = SDarray
+        return Psell, Pbuy, SDarray
 
-#         return self._pricingScheme.applyPrices(x=x, gridPrices= gridPrices, FIT=FIT, listProsumers=listProsumers)
+    def applyPrices(self, x):
+        #assert(len(self.SDarray)==len(listProsumers))
+        """
+        :param SDarray: list of (lists <-temp list of supply and demand of prosumer i taking into consideration their REgeneration, net loads and battery energy levels at each timeslot)
+        :return: dictionary of prosumer ID : total price for the day (price to pay or to recieve)
+        """
+
+        return self._pricingScheme.applyPrices(x=x, gridPrices= gridPrices, FIT=FIT, listProsumers=listProsumers)
 
 
 
