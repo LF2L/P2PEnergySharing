@@ -8,16 +8,19 @@ class Battery:
         if initialEnergy is not None:
             assert (SOCmin * nominalCapacity <= initialEnergy <= SOCmax * nominalCapacity)
         self._nominalCapacity = nominalCapacity
-        self._SOCmin = SOCmin
-        self._SOCmax = SOCmax
-        self._selfDischarge = selfDischarge
-        self._chargeEfficiency = chargeEfficiency
-        self._dischargeEfficiency = dischargeEfficiency
+        self._SOCmin = SOCmin # unit: ratio 0<=X<=1
+        self._SOCmax = SOCmax # unit: ratio 0<=X<=1
+        self._selfDischarge = selfDischarge # unit: ratio 0<=X<=1
+        self._chargeEfficiency = chargeEfficiency # unit: ratio 0<=X<=1
+        self._dischargeEfficiency = dischargeEfficiency # unit: ratio 0<=X<=1
         #initialising energy level
         self._energyLevel = initialEnergy if initialEnergy is not None else self._SOCmin*self._nominalCapacity
         #initialising owner
         self._owner = None
         self._timeSlot = timeSlot
+
+        self._SOChistoric = []
+        self._SOChistoric.append(initialEnergy)
 
     #getters
     def _get_nominalCapacity(self):

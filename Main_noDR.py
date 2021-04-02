@@ -9,9 +9,11 @@ if __name__ == '__main__':
     # -------------------------------------problem definition----------------------------------------------------------
     stepSize = 10 # minutes 
     nbOfStepInOneDay= int(1440/ stepSize) # entire time in minutes divided by the size of one step
+    prosumers = []
 
     gridPrices = [random.random()/1000 for i in range(nbOfStepInOneDay)]
     FeedInTariff = 0.035 * np.ones(nbOfStepInOneDay) # define the FeedInTariff as constant over the day (based on the tarif defined in data.gouv.fr) - 10c€/kWh
+    
     with open('Forecasted/30001480014107') as f1:
         loadForecat1  = f1.read().splitlines()
     loadForecat1 = [float(lf) for lf in loadForecat1]
@@ -44,19 +46,40 @@ if __name__ == '__main__':
     battery4 = Battery(nominalCapacity=500* 600, SOCmin=0.2, SOCmax=0.8, selfDischarge=0, chargeEfficiency=1,
                        dischargeEfficiency=1, initialEnergy=100 * 600)
 
-    prosumer1 = Prosumer(1, loadForecat1, PV1, battery1)
-    prosumer2 = Prosumer(2, loadForecat2, PV2, battery2)
-    prosumer3 = Prosumer(3, loadForecat3, PV3, battery3)
-    prosumer4 = Prosumer(4, loadForecat4, PV4, battery4)
+    prosumers.append(Prosumer(1, loadForecat1, PV1, battery1)) 
+    prosumers.append(Prosumer(2, loadForecat2, PV2, battery2))
+    prosumers.append(Prosumer(3, loadForecat3, PV3, battery3))
+    prosumers.append(Prosumer(4, loadForecat4, PV4, battery4))
 
     #-------------------------------------------------------------------------------------------------------------------
     # instantiate RegularCoordinator with the prosumer list, grid prices and FeedInTariff
-    coordinator = RegularCoordinator(prosumerList=[prosumer1, prosumer2, prosumer3, prosumer4], gridPrices=gridPrices, FIT=FeedInTariff, algorithm="GA")
+    coordinator = RegularCoordinator(prosumerList=prosumers, gridPrices=gridPrices, FIT=FeedInTariff, algorithm="GA")
     #run optimisation and price calculation
     res, pricedic = coordinator.run()
 
     # display results
-    prosumer1.displayGraph()
-    prosumer2.displayGraph()
-    print(pricedic)
-    print(res)
+    coordinator.displayProsumers()
+    print(f"The self sufficciency factor of the community is: {coordinator.calculateSelfSufficiency()}")
+
+    # print(pricedic)
+    # print(res)
+
+    
+
+    total_conso = np.zeros(nbOfStepInOneDay)
+    for prosumer in prosumers:
+        total_conso = np.add(total_conso, prosumer._loadForecast)
+
+    total = []
+    for i in range(0, len(total)-1):
+        total[i] = loadForecat1[i] + loadForecat2[i] +loadForecat3[i] +loadForecat4[i]
+
+    fig, ax = plt.subplots()
+    ax.plot(range(0,len(res)), res, label="exchanges from the grid")
+    ax.plot(range(0, len(total_conso)), total_conso, label="total consumption")
+    ax.plot(range(0, len(total)), total, label="total")
+    ax.set(xlabel='timeslots', ylabel='Power (Wh)', title='')
+    ax.grid()
+    #fig.savefig("test.png")
+    ax.legend()
+    plt.show()

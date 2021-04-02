@@ -38,24 +38,24 @@ class CommonProblem(Problem): # extends the problem object from Pymoo
             # which is the maximum I can have in storage plus all i can produce
         super().__init__(n_var=len(loadForecast), n_obj=1, n_constr=1, xl=xl, xu=xu, elementwise_evaluation=False)
 
-    def calcCost(self, x, **kwargs):
-        """
-        :param x: one solution vector (size = nb of timeslot in a day)
-        :param kwargs1:
-        :return: real: total cost induced by this solution vector
-        """
+    # def calcCost(self, x, **kwargs):
+    #     """
+    #     :param x: one solution vector (size = nb of timeslot in a day)
+    #     :param kwargs1:
+    #     :return: real: total cost induced by this solution vector
+    #     """
 
-        s = 0
-        for i in range(len(x)):
+    #     s = 0
+    #     for i in range(len(x)):
             
-            if x[i] >= 0:
-                # if transation is positive, apply grid price 
-                s = s + x[i] * kwargs["gridPrices"][i]
-            else:
-                # if transation is nagtive, apply Feed in tariff 
-                s = s + x[i] * kwargs["FIT"][i]
+    #         if x[i] >= 0:
+    #             # if transation is positive, apply grid price 
+    #             s = s + x[i] * kwargs["gridPrices"][i]
+    #         else:
+    #             # if transation is nagtive, apply Feed in tariff 
+    #             s = s + x[i] * kwargs["FIT"][i]
 
-        return (s)
+    #     return (s)
 
     def calcConstr(self, x, **kwargs2):
             """
@@ -104,7 +104,11 @@ class CommonProblem(Problem): # extends the problem object from Pymoo
         """
 
         # generate the objectives for the optimization 
-        f1 = [self.calcCost(xi, gridPrices=self.Parameters["gridPrices"], FIT = self.Parameters["FIT"]) for xi in X]
+        # f1 = [self.calcCost(xi, gridPrices=self.Parameters["gridPrices"], FIT = self.Parameters["FIT"]) for xi in X] # return a vector
+
+        # function nb 7 in the article
+        # f1 = np.sum(np.where(X<0,X,0)*self.Parameters["FIT"] + np.where(X>0,X,0) * self.Parameters["gridPrices"] ) # return a scalar 
+        f1 = np.sum(np.where(X<0,X,0)*self.Parameters["FIT"] + np.where(X>0,X,0) * self.Parameters["gridPrices"] ) * np.ones(len(X))
         out["F"] =  np.column_stack([f1])
 
         # generate the constraints for the optimization 

@@ -112,7 +112,7 @@ class RegularCoordinator(Coordinator):
     def optimise(self, algorithm):
         # instantiate Optimiser with the OptimisationAlgorithm
         optimiser = Optimiser(algorithm=algorithm)
-        return optimiser.optimise()
+        return optimiser.optimise(verbose= False)
 
 
     def computeCommunityPricing(self, priceScheme):
@@ -121,10 +121,10 @@ class RegularCoordinator(Coordinator):
 
     def run(self):
         nbtimeslots = len(self._prosumers[0]._get_loadForecast())
-        totalLoadForecast = np.zeros(nbtimeslots)
+        self.totalLoadForecast = np.zeros(nbtimeslots)
         totalREforecast = np.zeros(nbtimeslots)
         for prosumer in self._prosumers:
-            totalLoadForecast = np.add(totalLoadForecast, prosumer._get_loadForecast())
+            self.totalLoadForecast = np.add(self.totalLoadForecast, prosumer._get_loadForecast())
             totalREforecast = np.add(totalREforecast, prosumer._get_REgeneration())
 
         # create batteryAggregation
@@ -134,14 +134,14 @@ class RegularCoordinator(Coordinator):
         batteryAggregation = BatteryAggregation(batteryList)
 
         # create CommonProblem
-        optProblem = CommonProblem(loadForecast = totalLoadForecast, REgenerationForecast=totalREforecast, batteryList=batteryList, FIT=self._FIT, gridPrices = self._gridPrices )
+        optProblem = CommonProblem(loadForecast = self.totalLoadForecast, REgenerationForecast=totalREforecast, batteryList=batteryList, FIT=self._FIT, gridPrices = self._gridPrices )
         # instantiate OptimisationAlgorithm
         if self.algorithm=="NSGAII":
             algorithm = NSGAII(optProblem)
         if self.algorithm=="GA":
             algorithm = G_A(optProblem)
         # optimise -> optimal solution
-        res = self.optimise(algorithm)
+        self.powerFromGrid= self.optimise(algorithm)
         #instantiate pricing scheme
         pricingscheme = SDR(gridSellPrices=self._gridPrices, FIT=self._FIT ,listProsumers=self._prosumers )
         # instantiate price calculator
@@ -151,4 +151,28 @@ class RegularCoordinator(Coordinator):
 
         resultPriceDic = pricingscheme.applyPrices()
 
-        return res, resultPriceDic
+        return self.powerFromGrid, resultPriceDic
+
+    def displayProsumers(self):
+        fig, axs = plt.subplots(1, len(self._prosumers))
+        fig.suptitle('Production and consumption of each prosumer')
+        for i, prosumer in enumerate(self._prosumers): 
+            axs[i].plot(range(0,len(prosumer._REgeneration)), prosumer._REgeneration, label="RE generation")
+            axs[i].plot(range(0,len(prosumer._loadForecast)), prosumer._loadForecast, label="Load forecast")
+            axs[i].set(xlabel='timeslots', ylabel='Power (Wh)', title='Prosumer {}'.format(prosumer._ID))
+            # axs[i].legend()
+        lines, labels = fig.axes[-1].get_legend_handles_labels()
+        fig.legend(lines,labels, loc='upper right')
+        plt.show()
+
+    def calculateSelfSufficiency(self):
+        if hasattr(self, 'totalLoadForecast') and hasattr(self, 'powerFromGrid') :
+            communityImportFromGrid = abs(np.sum(self.powerFromGrid))
+            communityTotalLoad = np.sum(self.totalLoadForecast)
+            selfSuficiency = (communityTotalLoad - communityImportFromGrid ) / communityTotalLoad
+            return selfSuficiency
+        else:
+            raise "The coordinator has to run() before calculate the self sufficiency indicator"
+
+        
+

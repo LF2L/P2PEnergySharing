@@ -1,5 +1,6 @@
 import random
 import numpy as np
+import timeit
 from P2PSystemSim.MultiAgent import ProsumerAgent, CoordinatorAgent
 from P2PSystemSim.Prosumer import *
 from P2PSystemSim.Assets import *
@@ -11,6 +12,8 @@ if __name__ == '__main__':
     # -------------------------------------problem definition----------------------------------------------------------
     stepSize = 10 # minutes 
     nbOfStepInOneDay= int(1440/ stepSize) # entire time in minutes divided by the size of one step
+
+    prosumerAgents = []
 
     gridPrices = [random.random()/1000 for i in range(nbOfStepInOneDay)]
     FIT = 0.035 * np.ones(nbOfStepInOneDay)
@@ -50,16 +53,22 @@ if __name__ == '__main__':
     battery4 = Battery(nominalCapacity=500* 600, SOCmin=0.2, SOCmax=0.8, selfDischarge=0, chargeEfficiency=1,
                        dischargeEfficiency=1, initialEnergy=100 * 600)
 
-    prosumerAgent1 = ProsumerAgent(prosumer=Prosumer(1, loadForecat1, PV1, battery1, [random.uniform(-1,1) for i in range(nbOfStepInOneDay)]) )
-    prosumerAgent2 = ProsumerAgent(prosumer=Prosumer(2, loadForecat2, PV2, battery2, [random.uniform(-1,1) for i in range(nbOfStepInOneDay)]) )
-    prosumerAgent3 = ProsumerAgent(prosumer=Prosumer(3, loadForecat3, PV3, battery3, [random.uniform(-1,1) for i in range(nbOfStepInOneDay)]) )
-    prosumerAgent4 = ProsumerAgent(prosumer=Prosumer(4, loadForecat4, PV4, battery4, [random.uniform(-1,1) for i in range(nbOfStepInOneDay)]) )
+    prosumerAgents.append(ProsumerAgent(prosumer=Prosumer(1, loadForecat1, PV1, battery1, [random.uniform(-1,1) for i in range(nbOfStepInOneDay)]) ))
+    prosumerAgents.append( ProsumerAgent(prosumer=Prosumer(2, loadForecat2, PV2, battery2, [random.uniform(-1,1) for i in range(nbOfStepInOneDay)]) ))
+    prosumerAgents.append(ProsumerAgent(prosumer=Prosumer(3, loadForecat3, PV3, battery3, [random.uniform(-1,1) for i in range(nbOfStepInOneDay)]) ))
+    prosumerAgents.append(ProsumerAgent(prosumer=Prosumer(4, loadForecat4, PV4, battery4, [random.uniform(-1,1) for i in range(nbOfStepInOneDay)]) ))
 
-    coordinatorAgent = CoordinatorAgent(prosumerAgents=[prosumerAgent1, prosumerAgent2, prosumerAgent3, prosumerAgent4], FIT=FIT, gridPrices=gridPrices)
+    coordinatorAgent = CoordinatorAgent(prosumerAgents=prosumerAgents, FIT=FIT, gridPrices=gridPrices)
     # define pricing method
-    pircingMtd = SDR(gridSellPrices=gridPrices, FIT=FIT, listProsumers=[prosumerAgent1, prosumerAgent2, prosumerAgent3, prosumerAgent4] )
+    pircingMtd = SDR(gridSellPrices=gridPrices, FIT=FIT, listProsumers=prosumerAgents )
+    tic=timeit.default_timer()
     coordinatorAgent.run(pricingScheme = pircingMtd, convergenceModel=NumberIterations(maxIterations=1))
+    toc=timeit.default_timer()
+    sim_time= toc - tic
+    print(f"simulation duration: {sim_time//60}' {sim_time%60}\"")
 
-
+    coordinatorAgent.displayProsumers()
+    coordinatorAgent.displayPricingEvolution()
+    #print(f"The self sufficciency factor of the community is: {coordinatorAgent.calculateSelfSufficiency()}")
 
     #-------------------------------------------------------------------------------------------------------------------

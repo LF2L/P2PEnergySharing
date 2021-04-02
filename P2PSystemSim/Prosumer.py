@@ -11,6 +11,8 @@ class Prosumer:
         self._loadForecast = loadForecast
         self._REgeneration = REgeneration
         self._shiftableLoadMatrix = shiftableLoadMatrix
+        self.loadHistoric = []
+        self.loadHistoric.append(loadForecast)
 
     def set_battery(self, battery: Battery):
         self._battery = battery
