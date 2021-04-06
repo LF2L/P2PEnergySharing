@@ -16,7 +16,7 @@ class Prosumer:
 
     def set_battery(self, battery: Battery):
         self._battery = battery
-        battery._set_owner(self)
+        battery._owner = self
         
     def _get_ID(self):
         return self._ID

@@ -8,7 +8,7 @@ from P2PSystemSim.CoordinationSytem import *
 if __name__ == '__main__':
     # -------------------------------------problem definition----------------------------------------------------------
     stepSize = 10 # minutes 
-    nbOfStepInOneDay= int(1440/ stepSize) # entire time in minutes divided by the size of one step
+    nbOfStepInOneDay= int(1440/ stepSize) # day time in minutes divided by the size of one step --> number of timeslot in a day
     prosumers = []
 
     gridPrices = [random.random()/1000 for i in range(nbOfStepInOneDay)]
@@ -38,13 +38,13 @@ if __name__ == '__main__':
     PV4 = PhotovoltaicPanel(surface=150, efficiency=0.16).elecProduction("DonnéesIrradianceSolaire/03-01-2020")
 
     battery1 = Battery(nominalCapacity=1000 * 600, SOCmin=0.2, SOCmax=0.8, selfDischarge=0, chargeEfficiency=1,
-                       dischargeEfficiency=1, initialEnergy=200 * 600)
+                       dischargeEfficiency=1, initialEnergy=200 * 600, timeSlot_duraction= nbOfStepInOneDay * 60)
     battery2 = Battery(nominalCapacity=500* 600, SOCmin=0.2, SOCmax=0.8, selfDischarge=0, chargeEfficiency=1,
-                       dischargeEfficiency=1, initialEnergy=100 * 600)
+                       dischargeEfficiency=1, initialEnergy=100 * 600, timeSlot_duraction= nbOfStepInOneDay * 60)
     battery3 = Battery(nominalCapacity=500* 600, SOCmin=0.2, SOCmax=0.8, selfDischarge=0, chargeEfficiency=1,
-                       dischargeEfficiency=1, initialEnergy=100 * 600)
+                       dischargeEfficiency=1, initialEnergy=100 * 600, timeSlot_duraction= nbOfStepInOneDay * 60)
     battery4 = Battery(nominalCapacity=500* 600, SOCmin=0.2, SOCmax=0.8, selfDischarge=0, chargeEfficiency=1,
-                       dischargeEfficiency=1, initialEnergy=100 * 600)
+                       dischargeEfficiency=1, initialEnergy=100 * 600, timeSlot_duraction= nbOfStepInOneDay * 60)
 
     prosumers.append(Prosumer(1, loadForecat1, PV1, battery1)) 
     prosumers.append(Prosumer(2, loadForecat2, PV2, battery2))
@@ -60,6 +60,8 @@ if __name__ == '__main__':
     # display results
     coordinator.displayProsumers()
     print(f"The self sufficciency factor of the community is: {coordinator.calculateSelfSufficiency()}")
+
+    coordinator.displayBatteriesSOC()
 
     # print(pricedic)
     # print(res)

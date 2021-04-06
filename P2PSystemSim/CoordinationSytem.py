@@ -131,7 +131,7 @@ class RegularCoordinator(Coordinator):
         batteryList = []
         for prosumer in self._prosumers:
             batteryList.append(prosumer._battery)
-        batteryAggregation = BatteryAggregation(batteryList)
+        # batteryAggregation = BatteryAggregation(batteryList)
 
         # create CommonProblem
         optProblem = CommonProblem(loadForecast = self.totalLoadForecast, REgenerationForecast=totalREforecast, batteryList=batteryList, FIT=self._FIT, gridPrices = self._gridPrices )
@@ -173,6 +173,23 @@ class RegularCoordinator(Coordinator):
             return selfSuficiency
         else:
             raise "The coordinator has to run() before calculate the self sufficiency indicator"
+    
+    def displayBatteriesSOC(self):
+        
+        fig, axs = plt.subplots(1, len(self._prosumers))
+        fig.suptitle('State of charge of the battery')
+        for i, prosumer in enumerate(self._prosumers):
+            print(f"Battery level: {prosumer._battery._energLevelHistoric}")
+            print(f"Battery SOC: {prosumer._battery._SOChistoric}")
+            #axs[i] = prosumer._battery.getSOCGraph()
+            axs[i].plot(range(0,len(prosumer._battery._SOChistoric)), prosumer._battery._SOChistoric, label="SOC", color="orange")
+            axs[i].hlines(y=prosumer._battery._SOCmin, xmin = 0 , xmax = len(prosumer._battery._SOChistoric), label="SOC Min")
+            axs[i].hlines(y=prosumer._battery._SOCmax, xmin = 0 , xmax = len(prosumer._battery._SOChistoric), label="SOC Max", color="r")
+            axs[i].set(xlabel='timeslots', ylabel='State of Charge (%)', title='Prosumer {}'.format(prosumer._ID))
+        lines, labels = fig.axes[-1].get_legend_handles_labels()
+        fig.legend(lines,labels, loc='upper right')
+        plt.show()
+
 
         
 

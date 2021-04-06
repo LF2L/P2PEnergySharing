@@ -5,7 +5,7 @@ from P2PSystemSim.Assets import *
 from P2PSystemSim.Optimiser import *
 #from utils import *
 from multiprocessing import Pool
-from copy import deepcopy
+#from copy import deepcopy
 from functools import partial
 import numpy as np
 
@@ -13,8 +13,8 @@ class CommonProblem(Problem): # extends the problem object from Pymoo
 
     def __init__(self,loadForecast, REgenerationForecast, **kwargs):
         assert(len(loadForecast) == len(REgenerationForecast))
-        self.BatteryList = deepcopy(kwargs["batteryList"])
-        totalNominalCapacity = sum([b._get_nominalCapacity() for b in self.BatteryList])
+        self.BatteryList = kwargs["batteryList"]
+        totalNominalCapacity = sum([battery._nominalCapacity for battery in self.BatteryList])
         self.loadForecast = loadForecast
         self.REgenerationForecast = REgenerationForecast
         self.Parameters = kwargs
@@ -29,7 +29,7 @@ class CommonProblem(Problem): # extends the problem object from Pymoo
         xl = np.zeros(self.nbTimeSlots)
         xu = np.zeros(self.nbTimeSlots)
         for i in range(0, self.nbTimeSlots):
-            xu[i] = self.loadForecast[i] - self.REgenerationForecast[i] + totalNominalCapacity/timeSlot # the upper bound
+            xu[i] = self.loadForecast[i] - self.REgenerationForecast[i] + totalNominalCapacity/self.nbTimeSlots # the upper bound
             # (positive value) represents the total needed load minus the RE generation (which is equivalent to the energy
             # demand that wasn't met by RE generation) plus the battery size. In other words: we cover energy demand
             # that wasn't met through RE generation and charge the battery to its maximum capacity admitting it was fully uncharged
@@ -66,30 +66,38 @@ class CommonProblem(Problem): # extends the problem object from Pymoo
             """
 
             # calculate vector that only records grid energy loads (feed-in values, i.e. negative values, are turned into zeros)
-            X = [x[i] if x[i]>=0 else 0 for i in range (len(x))]
+            #energy_import_from_grid  = np.where(x>0,x,0)
+            #X = [x[i] if x[i]>=0 else 0 for i in range (len(x))]
             # calculate vector that only records feed-in energy in positive form (grid loads, i.e. positive values, are turned into zeros)
-            Y = [-x[i] if x[i]<=0 else 0 for i in range(len(x))]
+            #Y = [-x[i] if x[i]<=0 else 0 for i in range(len(x))]
+            #energy_exported_to_grid = np.where(x<0,x,0)
 
             # Charge and discharge power calculation
             # in this model we cannot charge and discharge in the same time slot bc Y[i] isn't systematically drawn from battery
-            Pbc = np.zeros(len(x))
-            Pbd = np.zeros(len(x))
-            for i in range(len(x)):
-                surplus = X[i] + kwargs2["REgenerationForecast"][i] - kwargs2["loadForecast"][i] - Y[i]
-                # surplus is internal sources (RE generation) and external (grid load = x(i)) minus destinations (feed-ins and net loads)
-                if surplus>=0:
-                    Pbc[i] = surplus
-                else:
-                    Pbd[i] = -surplus
+            # Pbc = np.zeros(len(x))
+            # Pbd = np.zeros(len(x))
+            # for i in range(len(x)):
+            #     # surplus = X[i] + kwargs2["REgenerationForecast"][i] - kwargs2["loadForecast"][i] - Y[i]
+                
+            #     # surplus is internal sources (RE generation) and external (grid load = x(i)) minus destinations (feed-ins and net loads)
+            #     if surplus>=0:
+            #         Pbc[i] = surplus
+            #     else:
+            #         Pbd[i] = -surplus
+            surplus = np.where(x>0,x,0) + kwargs2["REgenerationForecast"] - kwargs2["loadForecast"] + np.where(x<0,x,0)
+            # power_battery_charing = np.where(surplus>0, surplus,0)
+            # power_battery_discharing = np.where(surplus<0, - surplus,0)
 
             #create aggregation of batteries and attempt to charge/discharge with Pbc and Pbd temp arrays
             batteryagg = BatteryAggregation(kwargs2["batteryList"])
             operator = batteryagg.operator()
-            G1 = operator.charge(Pbc)
-            G2 = operator.discharge(Pbd)
-            G = np.zeros(self.nbTimeSlots)
-            for i in range(len(G)):
-                G[i] = G1[i] if G1[i] != 0 else G2[i]
+            G = operator.loadProcessing(surplus)
+            # print(f"G: {G}")
+            # G1 = operator.charge(power_battery_charing)
+            # G2 = operator.discharge(power_battery_discharing)
+            # G = np.zeros(self.nbTimeSlots)
+            # for i in range(len(G)):
+            #     G[i] = G1[i] if G1[i] != 0 else G2[i]
 
             return G
 
