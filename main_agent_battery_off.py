@@ -14,8 +14,16 @@ def global_self_sufficiency(model):
         total_load += prosumer.load
     for prosumer in model.schedule.agents:
         total_prod += prosumer.production
-    return total_prod / total_load if total_prod != 0 else 0
+    return total_prod / total_load if total_load != 0 else 0
 
+def global_self_sufficiency2(model):
+    total_load = 0
+    total_import = 0
+    for prosumer in model.schedule.agents:
+        total_load += prosumer.load
+    for prosumer in model.schedule.agents:
+        total_import += prosumer.powerFromGrid
+    return (total_load - total_import) / total_load if total_load != 0 else 0
 
 class ProsumerAgent(Agent):
     """An agent with fixed initial wealth."""
@@ -31,50 +39,32 @@ class ProsumerAgent(Agent):
         self.pv_efficiency = efficiency  # scalar unit: NaN
         self.GHIList = GHIprofil  # array unit: w/m^2
 
-        # battery settings
-        self.b_nominalCapacity = batNomCapacity  # unit: kWh
-        self.b_SOCmin = SOCmin  # unit: ratio 0<=X<=1
-        self.b_SOCmax = SOCmax  # unit: ratio 0<=X<=1
-        self.b_SOC = initialSOC # unit: ratio 0<=X<=1
-        self.b_selfDischarge = selfDischarge  # unit: ratio 0<=X<=1
-        self.b_chargeEfficiency = chargeEfficiency  # unit: ratio 0<=X<=1
-        self.b_dischargeEfficiency = dischargeEfficiency  # unit: ratio 0<=X<=1
-        self.b_energyLevel = initialSOC * batNomCapacity # unit: kWh
-
         # prosumer setting
         self.loadProfil = loadProfil  # array unit : W
         self.load = self.loadProfil[self.stp] * self.step_duration  # scalar Wh
         self.production = self.solarProduction(self.GHIList[self.stp])  # scalar Wh
-        self.powerFromGrid = self.load - self.production # scalar unit: Wh
-        self.buyPrices=  [price/1000 for price in buyPrice] # scalar unit: oginally €/kWh --> €/Wh
-        self.spotPrices = spotPrice
-        self.cost = self.powerFromGrid * self.buyPrices[self.stp] if self.powerFromGrid > 0 else 0
-        self.profit = self.powerFromGrid * self.spotPrices[self.stp] if self.powerFromGrid < 0 else 0
-
+        self.power_need = self.load - self.production
+        self.powerFromGrid = self.power_need if self.power_need > 0 else 0  # scalar unit: Wh
+        self.powerToGrid = abs(self.power_need)  if self.power_need < 0 else 0  # scalar unit: Wh
+        self.buyPrices = [price/1000 for price in buyPrice] # array unit: oginally €/kWh --> €/Wh
+        self.spotPrices = [price/1000 for price in spotPrice] # array  unit : oginally €/kWh --> €/Wh
+        self.cost = self.powerFromGrid * self.buyPrices[self.stp]
+        self.profit = self.powerToGrid * self.spotPrices[self.stp]
 
     def solarProduction(self, ghi):
         return ghi*self.pv_surface*self.pv_efficiency # * self.step_duration
 
-    def optimise(self):
-         
-
     def step(self):
         self.load = self.loadProfil[self.stp] * self.step_duration
         self.production = self.solarProduction(self.GHIList[self.stp])
-        self.powerFromGrid = self.load - self.production - self.b_energyLevel *(1- self.b_SOCmin)
+        self.power_need = self.load - self.production
+        self.powerFromGrid = self.power_need if self.power_need > 0 else 0  # scalar unit: Wh
+        self.powerToGrid = abs(self.power_need)  if self.power_need < 0 else 0  # scalar unit: Wh
+
         self.cost = self.powerFromGrid * self.buyPrices[self.stp] if self.powerFromGrid > 0 else 0
-        self.profit = self.powerFromGrid * self.spotPrices[self.stp] if self.powerFromGrid < 0 else 0
-        self.b_energyLevel = self.b_energyLevel* (1- self.b_selfDischarge) 
-        self.b_SOC = self.b_energyLevel / self.b_nominalCapacity
+        self.profit = self.powerToGrid * self.spotPrices[self.stp] if self.powerToGrid > 0 else 0
         
         self.stp += 1
-        # The agent's step will go here.
-        # if self.wealth == 0:
-        #     return
-        # other_agent = self.random.choice(self.model.schedule.agents)
-        # other_agent.wealth += 1
-        # self.wealth -= 1
-
 
 class P2PEnergyTradingModel(Model):
     """A model with some number of agents."""
@@ -92,14 +82,10 @@ class P2PEnergyTradingModel(Model):
 
         self.datacollector = DataCollector(
             model_reporters={
-                "global_self_sufficiency": global_self_sufficiency},
-            agent_reporters={"SOC": "b_SOC", "cost": "cost", "load": "load", "production": "production", "importFromGrid": "powerFromGrid"})
+                "global_self_sufficiency": global_self_sufficiency, "global_self_sufficiency2": global_self_sufficiency2},
+            agent_reporters={"cost": "cost", "load": "load", "production": "production", "importFromGrid": "powerFromGrid"})
 
     def step(self):
-        # do the optimisation
-        self.schedule.agents
-
-
         self.datacollector.collect(self)
         self.schedule.step()
 
@@ -158,7 +144,8 @@ if __name__ == '__main__':
     # --------------- PRINT RESULTS -------------------------
 
     model_data = model.datacollector.get_model_vars_dataframe()
-    print(f"{model_data} %")
+    print(f"self sufficuiency 1: {model_data['global_self_sufficiency'].sum()} %")
+    print(f"self sufficuiency 2: {model_data['global_self_sufficiency2'].sum()} %")
 
     agent_data = model.datacollector.get_agent_vars_dataframe()
     # agent_data.xs(0, level="AgentID")["load"].plot()
@@ -191,22 +178,6 @@ if __name__ == '__main__':
         # axs[i].plot(range(0, nbOfStepInOneDay), agent_data.xs(i, level="AgentID")[
         #             "importFromGrid"], label="Importation from grid")
         axs[i//nb_graph_horizontal][i%nb_graph_horizontal].set(xlabel='timeslots', ylabel='Cost (€)',
-                   title='Prosumer {}'.format(i))
-        axs[i//nb_graph_horizontal][i%nb_graph_horizontal].legend()
-    # lines, labels = fig.axes[-1].get_legend_handles_labels()
-    # fig.legend(lines, labels, loc='upper right')
-    plt.show()
-
-    fig, axs = plt.subplots(2, ceil(len(data)/nb_graph_horizontal))
-    fig.suptitle('Battery state for each prosumer')
-    for i in range(len(data)):
-        axs[i//nb_graph_horizontal][i%nb_graph_horizontal].plot(range(0, nbOfStepInOneDay), agent_data.xs(
-            i, level="AgentID")["SOC"], label="State of charge")
-        # axs[i].plot(range(0, nbOfStepInOneDay), agent_data.xs(
-        #     i, level="AgentID")["load"], label="Load forecast")
-        # axs[i].plot(range(0, nbOfStepInOneDay), agent_data.xs(i, level="AgentID")[
-        #             "importFromGrid"], label="Importation from grid")
-        axs[i//nb_graph_horizontal][i%nb_graph_horizontal].set(xlabel='timeslots', ylabel='State (%)',
                    title='Prosumer {}'.format(i))
         axs[i//nb_graph_horizontal][i%nb_graph_horizontal].legend()
     # lines, labels = fig.axes[-1].get_legend_handles_labels()
