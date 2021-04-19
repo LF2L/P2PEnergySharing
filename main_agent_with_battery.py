@@ -14,76 +14,148 @@ def global_self_sufficiency(model):
         total_load += prosumer.load
     for prosumer in model.schedule.agents:
         total_prod += prosumer.production
-    return total_prod / total_load if total_prod != 0 else 0
+    return total_prod / total_load if total_load != 0 else 0
 
+def global_self_sufficiency2(model):
+    total_load = 0
+    total_import = 0
+    for prosumer in model.schedule.agents:
+        total_load += prosumer.load
+    for prosumer in model.schedule.agents:
+        total_import += prosumer.powerFromGrid
+    return (total_load - total_import) / total_load if total_load != 0 else 0
 
 class ProsumerAgent(Agent):
     """An agent with fixed initial wealth."""
 
-    def __init__(self, unique_id, loadProfil, buyPrice, spotPrice,  GHIprofil, PVsurface, efficiency, stp_duration, batNomCapacity, model, initialSOC = 0.5, SOCmin=0.2, SOCmax=0.9, selfDischarge=0.00, chargeEfficiency=1, dischargeEfficiency=1):
+    def __init__(self, unique_id, loadProfil, buyPrice, spotPrice,  GHIprofil, PVsurface, efficiency, stp_duration, batNomCapacity, model, initialSOC=0.5, SOCmin=0.2, SOCmax=0.9, selfDischarge=0.00, chargeEfficiency=1, dischargeEfficiency=1):
         super().__init__(unique_id, model)
 
         self.stp = 0
         self.step_duration = stp_duration/60  # scalar unit: hour
-        
+
         # PV settings
         self.pv_surface = PVsurface  # scalar unit: m^2
         self.pv_efficiency = efficiency  # scalar unit: NaN
         self.GHIList = GHIprofil  # array unit: w/m^2
 
         # battery settings
-        self.b_nominalCapacity = batNomCapacity  # unit: kWh
+        self.b_nominalCapacity = batNomCapacity * 1000 # unit: Wh
         self.b_SOCmin = SOCmin  # unit: ratio 0<=X<=1
         self.b_SOCmax = SOCmax  # unit: ratio 0<=X<=1
-        self.b_SOC = initialSOC # unit: ratio 0<=X<=1
+        self.b_SOC = initialSOC  # unit: ratio 0<=X<=1
         self.b_selfDischarge = selfDischarge  # unit: ratio 0<=X<=1
         self.b_chargeEfficiency = chargeEfficiency  # unit: ratio 0<=X<=1
         self.b_dischargeEfficiency = dischargeEfficiency  # unit: ratio 0<=X<=1
-        self.b_energyLevel = initialSOC * batNomCapacity # unit: kWh
+        self.b_energyLevel = initialSOC * self.b_nominalCapacity  # unit: Wh
 
         # prosumer setting
         self.loadProfil = loadProfil  # array unit : W
         self.load = self.loadProfil[self.stp] * self.step_duration  # scalar Wh
-        self.production = self.solarProduction(self.GHIList[self.stp])  # scalar Wh
-        self.powerFromGrid = self.load - self.production # scalar unit: Wh
-        self.buyPrices=  [price/1000 for price in buyPrice] # scalar unit: oginally €/kWh --> €/Wh
-        self.spotPrices = spotPrice
-        self.cost = self.powerFromGrid * self.buyPrices[self.stp] if self.powerFromGrid > 0 else 0
-        self.profit = self.powerFromGrid * self.spotPrices[self.stp] if self.powerFromGrid < 0 else 0
-
+        self.production = self.solarProduction(
+            self.GHIList[self.stp])  # scalar Wh
+        self.power_need = self.load - self.production
+        self.powerFromGrid = self.power_need if self.power_need > 0 else 0  # scalar unit: Wh
+        self.powerToGrid = abs(self.power_need)  if self.power_need < 0 else 0  # scalar unit: Wh
+        self.buyPrices = [price/1000 for price in buyPrice] # array unit: oginally €/kWh --> €/Wh
+        self.spotPrices = [price/1000 for price in spotPrice] # array  unit : oginally €/kWh --> €/Wh
+        self.cost = self.powerFromGrid * self.buyPrices[self.stp]
+        self.profit = self.powerToGrid * self.spotPrices[self.stp]
 
     def solarProduction(self, ghi):
-        return ghi*self.pv_surface*self.pv_efficiency # * self.step_duration
+        return ghi*self.pv_surface*self.pv_efficiency  # * self.step_duration
 
-    def optimise(self):
-         
+    # def optimise(self):
+    #     opti_problem = MyProblem()
+
+    #     init = np.sum([[loadForecast], [REgenerationForecast]], axis=0)
+    #     init_design_space = np.zeros(
+    #         (populationSize, opti_problem.n_var))
+    #     init_design_space[:, :144] = init
+    #     init_design_space[:, 144] = initial_value
+
+    #     termination = MultiObjectiveDefaultTermination(
+    #         x_tol=1e-8,
+    #         cv_tol=1e-2,
+    #         f_tol=0.0025,
+    #         nth_gen=5,
+    #         n_last=30,
+    #         n_max_gen=2000,
+    #         n_max_evals=10000000
+    #     )
+    #     algorithm = GA(pop_size=populationSize,
+    #                 eliminate_duplicates=True, sampling=init_design_space)
+
+    #     res = minimize(opti_problem,
+    #                     algorithm,
+    #                     termination= termination,
+    #                     return_least_infeasible=True,
+    #                     seed=1,
+    #                     save_history=True,
+    #                     verbose= True)
+    # return res
 
     def step(self):
+        
         self.load = self.loadProfil[self.stp] * self.step_duration
         self.production = self.solarProduction(self.GHIList[self.stp])
-        self.powerFromGrid = self.load - self.production - self.b_energyLevel *(1- self.b_SOCmin)
-        self.cost = self.powerFromGrid * self.buyPrices[self.stp] if self.powerFromGrid > 0 else 0
-        self.profit = self.powerFromGrid * self.spotPrices[self.stp] if self.powerFromGrid < 0 else 0
-        self.b_energyLevel = self.b_energyLevel* (1- self.b_selfDischarge) 
-        self.b_SOC = self.b_energyLevel / self.b_nominalCapacity
-        
-        self.stp += 1
-        # The agent's step will go here.
-        # if self.wealth == 0:
-        #     return
-        # other_agent = self.random.choice(self.model.schedule.agents)
-        # other_agent.wealth += 1
-        # self.wealth -= 1
+        self.power_need= self.load - self.production 
 
+        if (self.power_need >0):
+            # need energy 
+            if(self.b_energyLevel - self.b_nominalCapacity * self.b_SOCmin > 0):
+                # energy available in the battery 
+
+                if((self.b_energyLevel - self.b_nominalCapacity * self.b_SOCmin) - self.power_need > 0 ):
+                    # enough energy in the battery to cover the need
+                    self.b_energyLevel = self.b_energyLevel - self.power_need
+                    self.powerFromGrid = 0
+                    self.powerToGrid = 0
+                else:
+                    # need to import additional energy
+                    self.powerFromGrid = self.power_need - (self.b_energyLevel - self.b_nominalCapacity * self.b_SOCmin)
+                    self.powerToGrid = 0
+                    self.b_energyLevel = self.b_nominalCapacity * self.b_SOCmin            
+            else:
+                # no energy available in the battery
+                self.powerFromGrid = self.power_need
+                self.powerToGrid = 0
+                self.b_energyLevel = self.b_nominalCapacity * self.b_SOCmin
+        else:
+            # produce excedent 
+            if (self.b_nominalCapacity * self.b_SOCmax - self.b_energyLevel >= 0 ):
+                # battery not full - possibility to charge it 
+                if(abs(self.power_need) - (self.b_nominalCapacity * self.b_SOCmax - self.b_energyLevel) > 0):
+                    # too much energy produced to be stored in the battery
+                    self.powerToGrid = abs(self.power_need) - (self.b_nominalCapacity * self.b_SOCmax - self.b_energyLevel)
+                    self.powerFromGrid = 0
+                    self.b_energyLevel = self.b_nominalCapacity * self.b_SOCmax
+                else:
+                    # keep the energy in the battry 
+                    self.powerFromGrid = 0
+                    self.powerToGrid = 0 
+                    self.b_energyLevel = self.b_energyLevel + abs(self.power_need)
+            else:
+                # battery full
+                self.powerFromGrid = 0
+                self.powerToGrid = abs(self.power_need)
+                self.b_energyLevel = self.b_nominalCapacity * self.b_SOCmax
+
+        self.cost = self.powerFromGrid * self.buyPrices[self.stp] if self.powerFromGrid > 0 else 0
+        self.profit = self.powerToGrid * self.spotPrices[self.stp] if self.powerToGrid > 0 else 0
+
+        # battery usage
+        self.b_SOC = self.b_energyLevel / self.b_nominalCapacity
+
+        self.stp += 1
 
 class P2PEnergyTradingModel(Model):
     """A model with some number of agents."""
 
     def __init__(self, prosumerDataList, step_duration):
         self.num_agents = len(prosumerDataList)
-        self.schedule = RandomActivation(self) # SimultaneousActivation(self)
+        self.schedule = RandomActivation(self)  # SimultaneousActivation(self)
         # self.global_battery
-
 
         for i in range(self.num_agents):
             a = ProsumerAgent(i, prosumerDataList[i]["load"], prosumerDataList[i]["buyPrice"], prosumerDataList[i]["FIT"],  prosumerDataList[i]["GHI"],
@@ -92,13 +164,12 @@ class P2PEnergyTradingModel(Model):
 
         self.datacollector = DataCollector(
             model_reporters={
-                "global_self_sufficiency": global_self_sufficiency},
-            agent_reporters={"SOC": "b_SOC", "cost": "cost", "load": "load", "production": "production", "importFromGrid": "powerFromGrid"})
+                "global_self_sufficiency": global_self_sufficiency, "global_self_sufficiency2": global_self_sufficiency2},
+            agent_reporters={"SOC": "b_SOC", "cost": "cost", "profit": "profit", "load": "load", "production": "production","powerNeed":"power_need", "importFromGrid": "powerFromGrid", "exportToGrid": "powerToGrid", "SOCmin": "b_SOCmin", "SOCmax": "b_SOCmax"})
 
     def step(self):
         # do the optimisation
-        self.schedule.agents
-
+        # self.schedule.agents
 
         self.datacollector.collect(self)
         self.schedule.step()
@@ -111,7 +182,7 @@ if __name__ == '__main__':
     nbOfStepInOneDay = int(1440 / stepSize)
 
     # define the FeedInTariff as constant over the day (based on the tarif defined in data.gouv.fr) - 10c€/kWh
-    FeedInTariff = 0.035 * np.ones(nbOfStepInOneDay)
+    FeedInTariff = 0.10 * np.ones(nbOfStepInOneDay)
 
     data = []
 
@@ -134,7 +205,8 @@ if __name__ == '__main__':
     df = pd.read_csv('DonnéesIrradianceSolaire/03-01-2020')
     GHIlist = df["GHI"].tolist()
 
-    spotPricesDF = pd.read_csv('DonneesEnergyConsometers/spotPrice.csv',sep=";")
+    spotPricesDF = pd.read_csv(
+        'DonneesEnergyConsometers/spotPrice.csv', sep=";")
     spotPrices = spotPricesDF["kwhPrice"].tolist()
 
     prosumerData1 = {'buyPrice': spotPrices, 'FIT': FeedInTariff.tolist(), 'load': loadForecat1,
@@ -158,25 +230,31 @@ if __name__ == '__main__':
     # --------------- PRINT RESULTS -------------------------
 
     model_data = model.datacollector.get_model_vars_dataframe()
-    print(f"{model_data} %")
+    print(f"self sufficuiency 1: {model_data['global_self_sufficiency'].sum()} %")
+    print(f"self sufficuiency 2: {model_data['global_self_sufficiency2'].sum()} %")
 
     agent_data = model.datacollector.get_agent_vars_dataframe()
     # agent_data.xs(0, level="AgentID")["load"].plot()
     # plt.show()
     nb_graph_horizontal = 2
 
-    fig, axs = plt.subplots(nb_graph_horizontal, ceil(len(data)/nb_graph_horizontal))
+    fig, axs = plt.subplots(nb_graph_horizontal, ceil(
+        len(data)/nb_graph_horizontal))
     fig.suptitle('Production and consumption of each prosumer')
     for i in range(len(data)):
-        axs[i//nb_graph_horizontal][i%nb_graph_horizontal].plot(range(0, nbOfStepInOneDay), agent_data.xs(
+        axs[i//nb_graph_horizontal][i % nb_graph_horizontal].plot(range(0, nbOfStepInOneDay), agent_data.xs(
             i, level="AgentID")["production"], label="Energy produced by PV")
-        axs[i//nb_graph_horizontal][i%nb_graph_horizontal].plot(range(0, nbOfStepInOneDay), agent_data.xs(
+        axs[i//nb_graph_horizontal][i % nb_graph_horizontal].plot(range(0, nbOfStepInOneDay), agent_data.xs(
             i, level="AgentID")["load"], label="Energy consumed by prosumer")
-        axs[i//nb_graph_horizontal][i%nb_graph_horizontal].plot(range(0, nbOfStepInOneDay), agent_data.xs(i, level="AgentID")[
-                    "importFromGrid"], label="Energy from grid")
-        axs[i//nb_graph_horizontal][i%nb_graph_horizontal].set(xlabel='timeslots', ylabel='Power (Wh)',
-                   title='Prosumer {}'.format(i))
-        axs[i//nb_graph_horizontal][i%nb_graph_horizontal].legend()
+        axs[i//nb_graph_horizontal][i % nb_graph_horizontal].plot(range(0, nbOfStepInOneDay), agent_data.xs(i, level="AgentID")[
+            "importFromGrid"], label="Energy from grid")
+        axs[i//nb_graph_horizontal][i % nb_graph_horizontal].plot(range(0, nbOfStepInOneDay), agent_data.xs(i, level="AgentID")[
+            "exportToGrid"], label="Energy to grid")
+        axs[i//nb_graph_horizontal][i % nb_graph_horizontal].plot(range(0, nbOfStepInOneDay), agent_data.xs(i, level="AgentID")[
+            "powerNeed"], label="Energy Need")
+        axs[i//nb_graph_horizontal][i % nb_graph_horizontal].set(xlabel='timeslots', ylabel='Power (Wh)',
+                                                                 title='Prosumer {}'.format(i))
+        axs[i//nb_graph_horizontal][i % nb_graph_horizontal].legend()
     # lines, labels = fig.axes[-1].get_legend_handles_labels()
     # fig.legend(lines, labels, loc='upper right')
     plt.show()
@@ -184,15 +262,13 @@ if __name__ == '__main__':
     fig, axs = plt.subplots(2, ceil(len(data)/nb_graph_horizontal))
     fig.suptitle('Energy cost of each prosumer')
     for i in range(len(data)):
-        axs[i//nb_graph_horizontal][i%nb_graph_horizontal].plot(range(0, nbOfStepInOneDay), agent_data.xs(
+        axs[i//nb_graph_horizontal][i % nb_graph_horizontal].plot(range(0, nbOfStepInOneDay), agent_data.xs(
             i, level="AgentID")["cost"], label="Energy cost")
-        # axs[i].plot(range(0, nbOfStepInOneDay), agent_data.xs(
-        #     i, level="AgentID")["load"], label="Load forecast")
-        # axs[i].plot(range(0, nbOfStepInOneDay), agent_data.xs(i, level="AgentID")[
-        #             "importFromGrid"], label="Importation from grid")
-        axs[i//nb_graph_horizontal][i%nb_graph_horizontal].set(xlabel='timeslots', ylabel='Cost (€)',
-                   title='Prosumer {}'.format(i))
-        axs[i//nb_graph_horizontal][i%nb_graph_horizontal].legend()
+        axs[i//nb_graph_horizontal][i % nb_graph_horizontal].plot(range(0, nbOfStepInOneDay), agent_data.xs(
+            i, level="AgentID")["profit"], label="Energy selling profit")
+        axs[i//nb_graph_horizontal][i % nb_graph_horizontal].set(xlabel='timeslots', ylabel='Cost (€)',
+                                                                 title='Prosumer {}'.format(i))
+        axs[i//nb_graph_horizontal][i % nb_graph_horizontal].legend()
     # lines, labels = fig.axes[-1].get_legend_handles_labels()
     # fig.legend(lines, labels, loc='upper right')
     plt.show()
@@ -200,15 +276,15 @@ if __name__ == '__main__':
     fig, axs = plt.subplots(2, ceil(len(data)/nb_graph_horizontal))
     fig.suptitle('Battery state for each prosumer')
     for i in range(len(data)):
-        axs[i//nb_graph_horizontal][i%nb_graph_horizontal].plot(range(0, nbOfStepInOneDay), agent_data.xs(
+        axs[i//nb_graph_horizontal][i % nb_graph_horizontal].plot(range(0, nbOfStepInOneDay), agent_data.xs(
             i, level="AgentID")["SOC"], label="State of charge")
-        # axs[i].plot(range(0, nbOfStepInOneDay), agent_data.xs(
-        #     i, level="AgentID")["load"], label="Load forecast")
-        # axs[i].plot(range(0, nbOfStepInOneDay), agent_data.xs(i, level="AgentID")[
-        #             "importFromGrid"], label="Importation from grid")
-        axs[i//nb_graph_horizontal][i%nb_graph_horizontal].set(xlabel='timeslots', ylabel='State (%)',
-                   title='Prosumer {}'.format(i))
-        axs[i//nb_graph_horizontal][i%nb_graph_horizontal].legend()
+        axs[i//nb_graph_horizontal][i % nb_graph_horizontal].set(xlabel='timeslots', ylabel='State (%)',
+                                                                 title='Prosumer {}'.format(i))
+        axs[i//nb_graph_horizontal][i % nb_graph_horizontal].hlines(y=agent_data.xs(
+            i, level="AgentID")["SOCmin"], xmin = 0 , xmax = nbOfStepInOneDay, label="Level Min")
+        axs[i//nb_graph_horizontal][i % nb_graph_horizontal].hlines(y=agent_data.xs(
+            i, level="AgentID")["SOCmax"], xmin = 0 , xmax = nbOfStepInOneDay, label="Level Max")
+        axs[i//nb_graph_horizontal][i % nb_graph_horizontal].legend()
     # lines, labels = fig.axes[-1].get_legend_handles_labels()
     # fig.legend(lines, labels, loc='upper right')
     plt.show()
