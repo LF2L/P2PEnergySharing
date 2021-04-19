@@ -129,3 +129,10 @@ if __name__ == '__main__':
     lines, labels = fig.axes[-1].get_legend_handles_labels()
     fig.legend(lines,labels, loc='upper right')
     plt.show()
+
+    print("prod")
+    print(agent_data.xs(i, level="AgentID")["production"])
+    print("load")
+    print(agent_data.xs(i, level="AgentID")["load"])
+    print("import")
+    print(agent_data.xs(i, level="AgentID")["importFromGrid"])
