@@ -25,6 +25,12 @@ def global_self_sufficiency2(model):
         total_import += prosumer.powerFromGrid
     return (total_load - total_import) / total_load if total_load != 0 else 0
 
+def global_cost(model):
+    intermedary_total_cost = 0
+    for prosumer in model.schedule.agents:
+        intermedary_total_cost += prosumer.cost
+    return intermedary_total_cost
+
 class ProsumerAgent(Agent):
     """An agent with fixed initial wealth."""
 
@@ -82,7 +88,7 @@ class P2PEnergyTradingModel(Model):
 
         self.datacollector = DataCollector(
             model_reporters={
-                "global_self_sufficiency": global_self_sufficiency, "global_self_sufficiency2": global_self_sufficiency2},
+                "global_self_sufficiency": global_self_sufficiency, "global_self_sufficiency2": global_self_sufficiency2, "global_cost": global_cost},
             agent_reporters={"cost": "cost", "load": "load", "production": "production", "importFromGrid": "powerFromGrid"})
 
     def step(self):
@@ -147,39 +153,75 @@ if __name__ == '__main__':
     print(f"self sufficuiency 1: {model_data['global_self_sufficiency'].sum()} %")
     print(f"self sufficuiency 2: {model_data['global_self_sufficiency2'].sum()} %")
 
+    print(f"global cost: {model_data['global_cost'].sum()}")
+
     agent_data = model.datacollector.get_agent_vars_dataframe()
     # agent_data.xs(0, level="AgentID")["load"].plot()
     # plt.show()
     nb_graph_horizontal = 2
 
-    fig, axs = plt.subplots(nb_graph_horizontal, ceil(len(data)/nb_graph_horizontal))
+    # fig, axs = plt.subplots(nb_graph_horizontal, ceil(len(data)/nb_graph_horizontal))
+    # fig.suptitle('Production and consumption of each prosumer')
+    # for i in range(len(data)):
+    #     axs[i//nb_graph_horizontal][i%nb_graph_horizontal].plot(range(0, nbOfStepInOneDay), agent_data.xs(
+    #         i, level="AgentID")["production"], label="Energy produced by PV")
+    #     axs[i//nb_graph_horizontal][i%nb_graph_horizontal].plot(range(0, nbOfStepInOneDay), agent_data.xs(
+    #         i, level="AgentID")["load"], label="Energy consumed by prosumer")
+    #     axs[i//nb_graph_horizontal][i%nb_graph_horizontal].plot(range(0, nbOfStepInOneDay), agent_data.xs(i, level="AgentID")[
+    #                 "importFromGrid"], label="Energy from grid")
+    #     axs[i//nb_graph_horizontal][i%nb_graph_horizontal].set(xlabel='timeslots', ylabel='Power (Wh)',
+    #                title='Prosumer {}'.format(i))
+    #     axs[i//nb_graph_horizontal][i%nb_graph_horizontal].legend()
+    # # lines, labels = fig.axes[-1].get_legend_handles_labels()
+    # # fig.legend(lines, labels, loc='upper right')
+    # plt.show()
+
+    # fig, axs = plt.subplots(2, ceil(len(data)/nb_graph_horizontal))
+    # fig.suptitle('Energy cost of each prosumer')
+    # for i in range(len(data)):
+    #     axs[i//nb_graph_horizontal][i%nb_graph_horizontal].plot(range(0, nbOfStepInOneDay), agent_data.xs(
+    #         i, level="AgentID")["cost"], label="Energy cost")
+    #     # axs[i].plot(range(0, nbOfStepInOneDay), agent_data.xs(
+    #     #     i, level="AgentID")["load"], label="Load forecast")
+    #     # axs[i].plot(range(0, nbOfStepInOneDay), agent_data.xs(i, level="AgentID")[
+    #     #             "importFromGrid"], label="Importation from grid")
+    #     axs[i//nb_graph_horizontal][i%nb_graph_horizontal].set(xlabel='timeslots', ylabel='Cost (€)',
+    #                title='Prosumer {}'.format(i))
+    #     axs[i//nb_graph_horizontal][i%nb_graph_horizontal].legend()
+    # # lines, labels = fig.axes[-1].get_legend_handles_labels()
+    # # fig.legend(lines, labels, loc='upper right')
+    # plt.show()
+
+    fig, axs = plt.subplots(1, len(data))
     fig.suptitle('Production and consumption of each prosumer')
     for i in range(len(data)):
-        axs[i//nb_graph_horizontal][i%nb_graph_horizontal].plot(range(0, nbOfStepInOneDay), agent_data.xs(
+        axs[i].plot(range(0, nbOfStepInOneDay), agent_data.xs(
             i, level="AgentID")["production"], label="Energy produced by PV")
-        axs[i//nb_graph_horizontal][i%nb_graph_horizontal].plot(range(0, nbOfStepInOneDay), agent_data.xs(
+        axs[i].plot(range(0, nbOfStepInOneDay), agent_data.xs(
             i, level="AgentID")["load"], label="Energy consumed by prosumer")
-        axs[i//nb_graph_horizontal][i%nb_graph_horizontal].plot(range(0, nbOfStepInOneDay), agent_data.xs(i, level="AgentID")[
-                    "importFromGrid"], label="Energy from grid")
-        axs[i//nb_graph_horizontal][i%nb_graph_horizontal].set(xlabel='timeslots', ylabel='Power (Wh)',
-                   title='Prosumer {}'.format(i))
-        axs[i//nb_graph_horizontal][i%nb_graph_horizontal].legend()
-    # lines, labels = fig.axes[-1].get_legend_handles_labels()
-    # fig.legend(lines, labels, loc='upper right')
+        axs[i].plot(range(0, nbOfStepInOneDay), agent_data.xs(i, level="AgentID")[
+            "importFromGrid"], label="Energy from grid")
+        # axs[i].plot(range(0, nbOfStepInOneDay), agent_data.xs(i, level="AgentID")[
+        #     "exportToGrid"], label="Energy to grid")
+        # axs[i].plot(range(0, nbOfStepInOneDay), agent_data.xs(i, level="AgentID")[
+        #     "powerNeed"], label="Energy Need")
+        axs[i].set(xlabel='timeslots', ylabel='Power (Wh)',
+                                                                 title='Prosumer {}'.format(i+1))
+        # axs[i].legend()
+    lines, labels = fig.axes[-1].get_legend_handles_labels()
+    fig.legend(lines, labels, loc='center right')
     plt.show()
 
-    fig, axs = plt.subplots(2, ceil(len(data)/nb_graph_horizontal))
+    fig, axs = plt.subplots(1, len(data))
     fig.suptitle('Energy cost of each prosumer')
     for i in range(len(data)):
-        axs[i//nb_graph_horizontal][i%nb_graph_horizontal].plot(range(0, nbOfStepInOneDay), agent_data.xs(
+        axs[i].plot(range(0, nbOfStepInOneDay), agent_data.xs(
             i, level="AgentID")["cost"], label="Energy cost")
         # axs[i].plot(range(0, nbOfStepInOneDay), agent_data.xs(
-        #     i, level="AgentID")["load"], label="Load forecast")
-        # axs[i].plot(range(0, nbOfStepInOneDay), agent_data.xs(i, level="AgentID")[
-        #             "importFromGrid"], label="Importation from grid")
-        axs[i//nb_graph_horizontal][i%nb_graph_horizontal].set(xlabel='timeslots', ylabel='Cost (€)',
-                   title='Prosumer {}'.format(i))
-        axs[i//nb_graph_horizontal][i%nb_graph_horizontal].legend()
+        #     i, level="AgentID")["profit"], label="Energy selling profit")
+        axs[i].set(xlabel='timeslots', ylabel='Cost (€)',
+                                                                 title='Prosumer {}'.format(i+1))
+        axs[i].legend()
     # lines, labels = fig.axes[-1].get_legend_handles_labels()
     # fig.legend(lines, labels, loc='upper right')
     plt.show()
