@@ -1,20 +1,19 @@
 # P2P Energy Sharing simulation 
 
 design and development:
-- [Rima Oulhaj](https://gitlab.com/rimaoulhaj)
 - [Alex Gabriel](https://github.com/gabriel-alex)
+- [Rima Oulhaj](https://gitlab.com/rimaoulhaj)
 
 supervised by:
 - Alex Gabriel
 - Laurent Dupont 
 
 ## Description 
-Compare centralized and distributed optimisation approach for energy sharing/trading in a microgrid. 
+The project aims to create an open source P2P energy sharing simulation using optimization and multi-agent system. 
 
 ### Data used
 Information concerning tariff can be found on [data.gouv.fr](https://www.data.gouv.fr/fr/datasets/arretes-tarifaires-photovoltaiques-en-metropole/) or [photovoltaique.info](https://www.photovoltaique.info/fr/tarifs-dachat-et-autoconsommation/tarifs-dachat/arrete-tarifaire-en-vigueur/). In the case of saling surplus to inject it in the grid, the price is 0.10€/kWh.
 
-![structure](docs/multiagent-1.png)
 
 ## Set up the projet
 
@@ -36,11 +35,17 @@ pip3 install -r requirements.txt
 deactivate
 ```
 
-## Sorftware achitecture 
+Simulating 4 independant prosumers with PV
+```bash
+python3 main_agent_battery_off.py
+```
 
-![structure](docs/CentralisedOptimisation.png)
-![structure](docs/DistributedBiddingProcess.png)
-![structure](docs/DistributedPricingSchemes.png)
-![structure](docs/Batterycollection.png)
-![structure](docs/Predictor.png)
-![structure](docs/pricingSchemes.png)
+Simulating 4 independant prosumers with PV and battery 
+```bash
+python3 main_agent_with_battery.py
+```
+
+Simulating 4 optimized independant prosumers with PV and bettery
+```bash
+python3 main_agent_with_battery_opti.py
+```

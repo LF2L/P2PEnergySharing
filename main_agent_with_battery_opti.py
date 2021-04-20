@@ -5,7 +5,7 @@ import numpy as np
 from mesa.datacollection import DataCollector
 import matplotlib.pyplot as plt
 from math import *
-from prosumer_opti import *
+from optimisation.prosumer_opti import *
 
 
 def global_self_sufficiency(model):
